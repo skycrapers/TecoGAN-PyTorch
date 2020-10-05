@@ -5,15 +5,15 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 
 <center>
 <figure>
-    <img src="resources/fire.gif" width="350" />
-    <img src="resources/pond.gif" width="350" />
+    <img src="resources/fire.gif" width="320" />
+    <img src="resources/pond.gif" width="320" />
 </figure>
 </center>
 
 <center>
 <figure>
-    <img src="resources/foliage.gif" width="350" />
-    <img src="resources/bridge.gif" width="350" />
+    <img src="resources/foliage.gif" width="320" />
+    <img src="resources/bridge.gif" width="320" />
 </figure>
 </center>
 
@@ -160,7 +160,7 @@ bash ./train.sh BD TecoGAN
 
 <center>
 <figure>
-    <img src="resources/benchmark.png" width="800" />
+    <img src="resources/benchmark.png" width="700" />
 </figure>
 </center>
 
