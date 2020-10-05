@@ -3,19 +3,15 @@
 ### Introduction
 This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent **GAN** for Video Super-Resolution (VSR). Please refer to the official Tensorflow implementation [TecoGAN-Tensorflow](https://github.com/thunil/TecoGAN) for more information.
 
-<center>
-<figure>
-    <img src="resources/fire.gif" width="320" />
-    <img src="resources/pond.gif" width="320" />
-</figure>
-</center>
+<p align = "center">
+    <img src="resources/fire.gif" width="350" />
+    <img src="resources/pond.gif" width="350" />
+</p>
 
-<center>
-<figure>
-    <img src="resources/foliage.gif" width="320" />
-    <img src="resources/bridge.gif" width="320" />
-</figure>
-</center>
+<p align = "center">
+    <img src="resources/foliage.gif" width="350" />
+    <img src="resources/bridge.gif" width="350" />
+</p>
 
 
 ### Features
@@ -45,15 +41,15 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 
 ## Test
 
-**Note:** The following steps are for 4x upsampling in BD degradation. You can easily switch to BI degradation by replacing all `BD` to `BI` below.
+**Note:** We use different models for video sequences with different degradation types. The following steps are for 4x upsampling in BD degradation. You can switch to BI degradation by replacing all `BD` to `BI` below.
 
 1. Download the official Vid4 and ToS3 datasets.
 ```bash
 bash ./scripts/download/download_datasets.sh BD 
 ```
-> If the above command doesn't work, you can manually download these datasets from Google Drive, and unzip them under `./data`.
-> * Vid4 [[GT](https://drive.google.com/file/d/1T8TuyyOxEUfXzCanH5kvNH2iA8nI06Wj/view?usp=sharing)] [[BD degraded](https://drive.google.com/file/d/1-5NFW6fEPUczmRqKHtBVyhn2Wge6j3ma/view?usp=sharing)] [[BI degraded](https://drive.google.com/file/d/1Kg0VBgk1r9I1c4f5ZVZ4sbfqtVRYub91/view?usp=sharing)]
-> * ToS3 [[GT](https://drive.google.com/file/d/1XoR_NVBR-LbZOA8fXh7d4oPV0M8fRi8a/view?usp=sharing)] [[BD degraded](https://drive.google.com/file/d/1rDCe61kR-OykLyCo2Ornd2YgPnul2ffM/view?usp=sharing)] [[BI degraded](https://drive.google.com/file/d/1FNuC0jajEjH9ycqDkH4cZQ3_eUqjxzzf/view?usp=sharing)] 
+> If the above command doesn't work, you can manually download these datasets from Google Drive, and then unzip them under `./data`.
+> * Vid4 Dataset [[Ground-Truth Data](https://drive.google.com/file/d/1T8TuyyOxEUfXzCanH5kvNH2iA8nI06Wj/view?usp=sharing)] [[Low Resolution Data (BD degraded)](https://drive.google.com/file/d/1-5NFW6fEPUczmRqKHtBVyhn2Wge6j3ma/view?usp=sharing)] [[Low Resolution Data (BI degraded)](https://drive.google.com/file/d/1Kg0VBgk1r9I1c4f5ZVZ4sbfqtVRYub91/view?usp=sharing)]
+> * ToS3 Dataset [[Ground-Truth Data](https://drive.google.com/file/d/1XoR_NVBR-LbZOA8fXh7d4oPV0M8fRi8a/view?usp=sharing)] [[Low Resolution Data (BD degraded)](https://drive.google.com/file/d/1rDCe61kR-OykLyCo2Ornd2YgPnul2ffM/view?usp=sharing)] [[Low Resolution Data (BI degraded)](https://drive.google.com/file/d/1FNuC0jajEjH9ycqDkH4cZQ3_eUqjxzzf/view?usp=sharing)] 
 
 The dataset structure is shown as below.
 ```tex
@@ -125,16 +121,16 @@ data
     └─ meta_info.pkl       # each key has format: [vid]_[total_frame]x[h]x[w]_[i-th_frame]
 ```
 
-3. **(Optional, this step is needed only for BI degradation)** Manually generate the LR videos with Matlab's imresize function, and then create LMDB for them.
+3. **(Optional, this step is needed only for BI degradation)** Manually generate the LR sequences with Matlab's imresize function, and then create LMDB for them.
 ```bash
-# Generate the raw LR videos. Results will be saved at ./data/Bicubic4xLR
+# Generate the raw LR video sequences. Results will be saved at ./data/Bicubic4xLR
 matlab -nodesktop -nosplash -r "cd ./scripts; generate_lr_BI"
 
-# Create LMDB for the raw LR videos
+# Create LMDB for the raw LR video sequences
 python ./scripts/create_lmdb.py --dataset VimeoTecoGAN --data_type Bicubic4xLR
 ```
 
-4. Train a FRVSR model first, which is required to initialize the training of TecoGAN model. When the training is finished, copy and rename the last checkpoint weight from `./experiments_BD/FRVSR/001/train/ckpt/G_iter400000.pth` to `./pretrained_models/FRVSR_BD_iter400000.pth`.
+4. Train a FRVSR model first, which has exactly the same network architecture as TecoGAN, but without adversarial training. When the training is finished, copy and rename the last checkpoint weight from `./experiments_BD/FRVSR/001/train/ckpt/G_iter400000.pth` to `./pretrained_models/FRVSR_BD_iter400000.pth`. This step offers a better initialization for the TecoGAN training.
 ```bash
 bash ./train.sh BD FRVSR
 ```
@@ -158,16 +154,13 @@ bash ./train.sh BD TecoGAN
 
 ## Benchmark
 
-<center>
-<figure>
-    <img src="resources/benchmark.png" width="700" />
-</figure>
-</center>
+<p align = "center">
+    <img src="resources/benchmark.png" width="800" />
+</p>
 
+> <sup>[1]</sup> FLOPs & speed are computed on RGB sequence with resolution 134\*320 on NVIDIA GeForce GTX 1080Ti GPU. \
+> <sup>[2]</sup> Both FRVSR & TecoGAN use 10 residual blocks, while TecoGAN+ has 16 residual blocks.
 
-> <sup>[1]</sup> FRVSR is a distortion-based model, which has exactly the same network architecture as TecoGAN, but without adversarial training. \
-> <sup>[2]</sup> FLOPs & speed are computed on RGB sequence with resolution 134\*320 on NVIDIA GeForce GTX 1080Ti GPU. \
-> <sup>[3]</sup> Both FRVSR & TecoGAN use 10 residual blocks, while TecoGAN+ has 16 residual blocks.
 
 
 ## License & Citation
@@ -184,6 +177,7 @@ The provided implementation is strictly for academic purposes only. If you use t
   publisher={ACM New York, NY, USA}
 }
 ```
+
 
 
 ## Acknowledgements
