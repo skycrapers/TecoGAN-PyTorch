@@ -4,13 +4,13 @@
 This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent **GAN** for Video Super-Resolution (VSR). Please refer to the official Tensorflow implementation [TecoGAN-Tensorflow](https://github.com/thunil/TecoGAN) for more information.
 
 <p align = "center">
-    <img src="resources/fire.gif" width="350" />
-    <img src="resources/pond.gif" width="350" />
+    <img src="resources/fire.gif" width="320" />
+    <img src="resources/pond.gif" width="320" />
 </p>
 
 <p align = "center">
-    <img src="resources/foliage.gif" width="350" />
-    <img src="resources/bridge.gif" width="350" />
+    <img src="resources/foliage.gif" width="320" />
+    <img src="resources/bridge.gif" width="320" />
 </p>
 
 
@@ -41,7 +41,7 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 
 ## Test
 
-**Note:** We use different models for video sequences with different degradation types. The following steps are for 4x upsampling in BD degradation. You can switch to BI degradation by replacing all `BD` to `BI` below.
+**Note:** We apply different models according to the degradation type of the data. The following steps are for 4x upsampling in BD degradation. You can switch to BI degradation by replacing all `BD` to `BI` below.
 
 1. Download the official Vid4 and ToS3 datasets.
 ```bash
@@ -155,7 +155,7 @@ bash ./train.sh BD TecoGAN
 ## Benchmark
 
 <p align = "center">
-    <img src="resources/benchmark.png" width="800" />
+    <img src="resources/benchmark.png" width="640" />
 </p>
 
 > <sup>[1]</sup> FLOPs & speed are computed on RGB sequence with resolution 134\*320 on NVIDIA GeForce GTX 1080Ti GPU. \
