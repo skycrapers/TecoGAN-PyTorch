@@ -183,4 +183,4 @@ The provided implementation is strictly for academic purposes only. If you use t
 ## Acknowledgements
 This code is built on [TecoGAN-Tensorflow](https://github.com/thunil/TecoGAN), [BasicSR](https://github.com/xinntao/BasicSR) and [LPIPS](https://github.com/richzhang/PerceptualSimilarity). We thank the authors for sharing their codes.
 
-If you have any questions, feel free to email `dengjn@zju.edu.cn`
+If you have any questions, feel free to email `jn.deng@foxmail.com`
