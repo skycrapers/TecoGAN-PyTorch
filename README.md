@@ -1,7 +1,7 @@
 # TecoGAN-PyTorch
 
 ### Introduction
-This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent **GAN** for Video Super-Resolution (VSR). Please refer to the official Tensorflow implementation [TecoGAN-Tensorflow](https://github.com/thunil/TecoGAN) for more information.
+This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent **GAN** for Video Super-Resolution (VSR). Please refer to the official TensorFlow implementation [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN) for more information.
 
 <p align = "center">
     <img src="resources/fire.gif" width="320" />
@@ -15,7 +15,7 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 
 
 ### Features
-- **Better Performance**: This repo provides models with smaller sizes yet better performances (on Vid4 & ToS3 datasets) than the official repo.
+- **Better Performance**: This repo provides model with smaller size yet better performance than the official repo. See our [Benchmark](https://github.com/skycrapers/TecoGAN-PyTorch#benchmark) on Vid4 and ToS3 datasets.
 - **Multiple Degradations**: This repo supports two types of degradation, i.e., BI & BD. Please refer to [this wiki]() for more details about degradation types.
 - **Unified Framework**: This repo provides a unified framework for distortion-based and perception-based VSR methods.
 
@@ -84,7 +84,7 @@ bash ./scripts/download/download_models.sh BD TecoGAN
 bash ./test.sh BD TecoGAN
 ```
 
-4. Evaluate SR results using the official metrics. These codes are borrowed from [TecoGAN-Tensorflow](https://github.com/thunil/TecoGAN), with minor modifications to adapt to BI mode.
+4. Evaluate SR results using the official metrics. These codes are borrowed from [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), with minor modifications to adapt to BI mode.
 ```bash
 python ./codes/official_metrics/evaluate.py --model TecoGAN_BD_iter500000
 ```
@@ -95,7 +95,7 @@ bash ./profile.sh BD TecoGAN 3x134x320
 ```
 
 ## Training
-1. Download the official training dataset based on the instructions in [TecoGAN-Tensorflow](https://github.com/thunil/TecoGAN), rename to `VimeoTecoGAN` and then place under `./data`.
+1. Download the official training dataset based on the instructions in [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), rename to `VimeoTecoGAN` and then place under `./data`.
 
 2. Generate LMDB for GT data to accelerate IO. The LR counterpart will then be generated on the fly during training.
 ```bash
@@ -181,6 +181,6 @@ The provided implementation is strictly for academic purposes only. If you use t
 
 
 ## Acknowledgements
-This code is built on [TecoGAN-Tensorflow](https://github.com/thunil/TecoGAN), [BasicSR](https://github.com/xinntao/BasicSR) and [LPIPS](https://github.com/richzhang/PerceptualSimilarity). We thank the authors for sharing their codes.
+This code is built on [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), [BasicSR](https://github.com/xinntao/BasicSR) and [LPIPS](https://github.com/richzhang/PerceptualSimilarity). We thank the authors for sharing their codes.
 
 If you have any questions, feel free to email `jn.deng@foxmail.com`
