@@ -86,7 +86,7 @@ def setup_paths(opt, mode):
             opt['test']['res_dir'] = res_dir
         os.makedirs(res_dir, exist_ok=True)
 
-    def setup_json_path(dataset_idx):
+    def setup_json_path():
         json_dir = opt['test'].get('json_dir')
         if not json_dir:
             # use default dir
@@ -126,7 +126,7 @@ def setup_paths(opt, mode):
                 setup_res_dir()
 
             if opt['test'].get('save_json'):
-                setup_json_path(dataset_idx)
+                setup_json_path()
 
     elif mode == 'test':
         setup_model_path()

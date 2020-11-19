@@ -6,7 +6,7 @@ class BaseSequenceGenerator(nn.Module):
         super(BaseSequenceGenerator, self).__init__()
 
     def generate_dummy_input(self, lr_size):
-        """ use for compute pre-step FLOPs and speed
+        """ use for compute per-step FLOPs and speed
             return random tensors that can be taken as input of <forward>
         """
         return None

@@ -130,7 +130,7 @@ matlab -nodesktop -nosplash -r "cd ./scripts; generate_lr_BI"
 python ./scripts/create_lmdb.py --dataset VimeoTecoGAN --data_type Bicubic4xLR
 ```
 
-4. Train a FRVSR model first, which has exactly the same network architecture as TecoGAN, but without adversarial training. When the training is finished, copy and rename the last checkpoint weight from `./experiments_BD/FRVSR/001/train/ckpt/G_iter400000.pth` to `./pretrained_models/FRVSR_BD_iter400000.pth`. This step offers a better initialization for the TecoGAN training.
+4. Train a FRVSR model first. FRVSR has the same generator as TecoGAN, but without GAN training. When the training is finished, copy and rename the last checkpoint weight from `./experiments_BD/FRVSR/001/train/ckpt/G_iter400000.pth` to `./pretrained_models/FRVSR_BD_iter400000.pth`. This step offers a better initialization for the TecoGAN training.
 ```bash
 bash ./train.sh BD FRVSR
 ```
