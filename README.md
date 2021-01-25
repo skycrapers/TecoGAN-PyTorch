@@ -164,7 +164,7 @@ bash ./train.sh BD TecoGAN
 
 
 ## License & Citation
-The provided implementation is strictly for academic purposes only. If you use this code for your research, please cite the following paper.
+If you use this code for your research, please cite the following paper.
 ```tex
 @article{tecogan2020,
   title={Learning temporal coherence via self-supervision for GAN-based video generation},
