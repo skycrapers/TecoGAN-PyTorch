@@ -136,7 +136,7 @@ class BicubicUpsample(nn.Module):
         f = self.scale_factor
 
         # merge n&c
-        input = input.view(n*c, 1, h, w)
+        input = input.reshape(n*c, 1, h, w)
 
         # pad input (left, right, top, bottom)
         input = F.pad(input, (1, 2, 1, 2), mode='replicate')
@@ -152,7 +152,7 @@ class BicubicUpsample(nn.Module):
         output = output.permute(0, 2, 3, 1).reshape(n*c, 1, f*h, f*w)
 
         # split n&c
-        output = output.view(n, c, f*h, f*w)
+        output = output.reshape(n, c, f*h, f*w)
 
         return output
 
