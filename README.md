@@ -32,8 +32,8 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 ## Dependencies
 - Ubuntu >= 16.04
 - NVIDIA GPU + CUDA
-- Python 3
-- PyTorch >= 1.0.0
+- Python >= 3.7
+- PyTorch >= 1.4.0
 - Python packages: numpy, matplotlib, opencv-python, pyyaml, lmdb
 - (Optional) Matlab >= R2016b
 
