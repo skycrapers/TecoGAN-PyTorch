@@ -2,8 +2,9 @@ from collections import OrderedDict
 import os.path as osp
 
 import torch
+from torch.nn.parallel import DistributedDataParallel
 
-from utils.base_utils import get_logger
+from utils.dist_utils import master_only
 
 
 class BaseModel():
@@ -11,8 +12,8 @@ class BaseModel():
         self.opt = opt
         self.verbose = opt['verbose']
         self.scale = opt['scale']
-        self.logger = get_logger('base')
         self.device = torch.device(opt['device'])
+        self.dist = opt['dist']
         self.is_train = opt['is_train']
 
         if self.is_train:
@@ -21,13 +22,19 @@ class BaseModel():
             self.log_dict = OrderedDict()
             self.running_log_dict = OrderedDict()
 
-    def set_network(self):
+    def set_networks(self):
         pass
 
     def config_training(self):
         pass
 
-    def set_criterion(self):
+    def set_criterions(self):
+        pass
+
+    def set_optimizers(self):
+        pass
+
+    def set_lr_schedules(self):
         pass
 
     def train(self, data):
@@ -35,6 +42,13 @@ class BaseModel():
 
     def infer(self, data):
         pass
+
+    def model_to_device(self, net):
+        net = net.to(self.device)
+        if self.dist:
+            net = DistributedDataParallel(
+                net, device_ids=[torch.cuda.current_device()])
+        return net
 
     def update_learning_rate(self):
         if hasattr(self, 'sched_G') and self.sched_G is not None:
@@ -76,17 +90,27 @@ class BaseModel():
     def save(self, current_iter):
         pass
 
+    @master_only
     def save_network(self, net, net_label, current_iter):
-        save_filename = '{}_iter{}.pth'.format(net_label, current_iter)
-        save_path = osp.join(self.ckpt_dir, save_filename)
+        filename = f'{net_label}_iter{current_iter}.pth'
+        save_path = osp.join(self.ckpt_dir, filename)
+        net = self.get_bare_model(net)
         torch.save(net.state_dict(), save_path)
 
     def save_training_state(self, current_epoch, current_iter):
         # TODO
         pass
 
+    @staticmethod
+    def get_bare_model(net):
+        if isinstance(net, DistributedDataParallel):
+            net = net.module
+        return net
+
     def load_network(self, net, load_path):
-        net.load_state_dict(torch.load(load_path))
+        state_dict = torch.load(load_path, map_location=lambda storage, loc: storage)
+        net = self.get_bare_model(net)
+        net.load_state_dict(state_dict)
 
     def pad_sequence(self, lr_data):
         """

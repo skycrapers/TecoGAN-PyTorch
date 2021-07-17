@@ -106,4 +106,3 @@ def save_sequence(seq_dir, seq_data, frm_idx_lst=None, to_bgr=False):
     os.makedirs(seq_dir, exist_ok=True)
     for i in range(tot_frm):
         cv2.imwrite(osp.join(seq_dir, frm_idx_lst[i]), seq_data[i])
-

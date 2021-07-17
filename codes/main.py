@@ -1,8 +1,6 @@
 import os
 import os.path as osp
 import math
-import argparse
-import yaml
 import time
 
 import torch
@@ -12,17 +10,15 @@ from models import define_model
 from models.networks import define_generator
 from metrics.metric_calculator import MetricCalculator
 from metrics.model_summary import register, profile_model
-from utils import base_utils, data_utils
+from utils import dist_utils, base_utils, data_utils
 
 
 def train(opt):
     # logging
-    logger = base_utils.get_logger('base')
-    logger.info('{} Options {}'.format('='*20, '='*20))
     base_utils.print_options(opt, logger)
 
     # create data loader
-    train_loader = create_dataloader(opt, dataset_idx='train')
+    train_loader = create_dataloader(opt, phase='train', idx='train')
 
     # create downsampling kernels for BD degradation
     kernel = data_utils.create_kernel(opt)
@@ -41,18 +37,20 @@ def train(opt):
     log_freq = opt['logger']['log_freq']
     ckpt_freq = opt['logger']['ckpt_freq']
 
-    logger.info('Number of training samples: {}'.format(total_sample))
-    logger.info('Total epochs needed: {} for {} iterations'.format(
-        total_epoch, total_iter))
+    base_utils.log_info(f'Number of training samples: {total_sample}')
+    base_utils.log_info(f'Total epochs needed: {total_epoch} for {total_iter} iterations')
 
     # train
     for epoch in range(total_epoch):
+        if opt['dist']:
+            train_loader.sampler.set_epoch(epoch)
+
         for data in train_loader:
             # update iter
             iter += 1
             curr_iter = start_iter + iter
             if iter > total_iter:
-                logger.info('Finish training')
+                base_utils.log_info('Finish training')
                 break
 
             # update learning rate
@@ -80,7 +78,7 @@ def train(opt):
                 msg += ', '.join([
                     '{}: {:.3e}'.format(k, v) for k, v in log_dict.items()])
 
-                logger.info(msg)
+                base_utils.log_info(msg)
 
             # save model
             if ckpt_freq > 0 and iter % ckpt_freq == 0:
@@ -98,11 +96,10 @@ def train(opt):
                         continue
 
                     ds_name = opt['dataset'][dataset_idx]['name']
-                    logger.info(
-                        'Testing on {}: {}'.format(dataset_idx, ds_name))
+                    base_utils.log_info(f'Testing on {dataset_idx}: {ds_name}')
 
                     # create data loader
-                    test_loader = create_dataloader(opt, dataset_idx=dataset_idx)
+                    test_loader = create_dataloader(opt, phase='test', idx=dataset_idx)
 
                     # define metric calculator
                     metric_calculator = MetricCalculator(opt)
@@ -145,20 +142,15 @@ def train(opt):
 
 def test(opt):
     # logging
-    logger = base_utils.get_logger('base')
-    if opt['verbose']:
-        logger.info('{} Configurations {}'.format('=' * 20, '=' * 20))
-        base_utils.print_options(opt, logger)
+    base_utils.print_options(opt)
 
     # infer and evaluate performance for each model
     for load_path in opt['model']['generator']['load_path_lst']:
-        # setup model index
+        # set model index
         model_idx = osp.splitext(osp.split(load_path)[-1])[0]
         
         # log
-        logger.info('=' * 40)
-        logger.info('Testing model: {}'.format(model_idx))
-        logger.info('=' * 40)
+        base_utils.log_info(f'{"="*40}\nTesting model: {model_idx}\n{"="*40}')
 
         # create model
         opt['model']['generator']['load_path'] = load_path
@@ -166,46 +158,44 @@ def test(opt):
 
         # for each test dataset
         for dataset_idx in sorted(opt['dataset'].keys()):
-            # use dataset with prefix `test`
-            if not dataset_idx.startswith('test'):
+            # select testing dataset
+            if not 'test' in dataset_idx:
                 continue
 
             ds_name = opt['dataset'][dataset_idx]['name']
-            logger.info('Testing on {}: {}'.format(dataset_idx, ds_name))
+            base_utils.log_info(f'Testing on {ds_name} dataset')
 
             # create data loader
-            test_loader = create_dataloader(opt, dataset_idx=dataset_idx)
+            test_loader = create_dataloader(opt, phase='test', idx=dataset_idx)
+            test_dataset = test_loader.dataset
 
             # infer and store results for each sequence
-            for data in test_loader:
+            rank, world_size = dist_utils.get_dist_info()
+            for idx in range(rank, len(test_dataset), world_size):
                 # fetch data
-                lr_data = data['lr'][0]
-                seq_idx = data['seq_idx'][0]
-                frm_idx = [frm_idx[0] for frm_idx in data['frm_idx']]
+                data = test_dataset[idx]
 
                 # infer
-                hr_seq = model.infer(lr_data)  # thwc|rgb|uint8
+                hr_seq = model.infer(data['lr'])  # thwc|rgb|uint8
 
                 # save results (optional)
                 if opt['test']['save_res']:
                     res_dir = osp.join(
                         opt['test']['res_dir'], ds_name, model_idx)
-                    res_seq_dir = osp.join(res_dir, seq_idx)
+                    res_seq_dir = osp.join(res_dir, data['seq_idx'])
                     data_utils.save_sequence(
-                        res_seq_dir, hr_seq, frm_idx, to_bgr=True)
+                        res_seq_dir, hr_seq, data['frm_idx'], to_bgr=True)
 
-            logger.info('-' * 40)
+            base_utils.log_info('-' * 40)
 
     # logging
-    logger.info('Finish testing')
-    logger.info('=' * 40)
+    base_utils.log_info('Finish testing')
+    base_utils.log_info('=' * 40)
 
 
 def profile(opt, lr_size, test_speed=False):
     # logging
-    logger = base_utils.get_logger('base')
-    logger.info('{} Model Information {}'.format('='*20, '='*20))
-    base_utils.print_options(opt['model']['generator'], logger)
+    base_utils.print_options(opt['model']['generator'])
 
     # basic configs
     scale = opt['scale']
@@ -215,6 +205,7 @@ def profile(opt, lr_size, test_speed=False):
     net_G = define_generator(opt).to(device)
 
     # get dummy input
+    lr_size = tuple(map(int, lr_size.split('x')))
     dummy_input_dict = net_G.generate_dummy_input(lr_size)
     for key in dummy_input_dict.keys():
         dummy_input_dict[key] = dummy_input_dict[key].to(device)
@@ -223,12 +214,12 @@ def profile(opt, lr_size, test_speed=False):
     register(net_G, dummy_input_dict)
     gflops, params = profile_model(net_G)
 
-    logger.info('-' * 40)
-    logger.info('Super-resolute data from {}x{}x{} to {}x{}x{}'.format(
+    base_utils.log_info('-' * 40)
+    base_utils.log_info('Super-resolute data from {}x{}x{} to {}x{}x{}'.format(
         *lr_size, lr_size[0], lr_size[1]*scale, lr_size[2]*scale))
-    logger.info('Parameters (x10^6): {:.3f}'.format(params/1e6))
-    logger.info('FLOPs (x10^9): {:.3f}'.format(gflops))
-    logger.info('-' * 40)
+    base_utils.log_info('Parameters (x10^6): {:.3f}'.format(params/1e6))
+    base_utils.log_info('FLOPs (x10^9): {:.3f}'.format(gflops))
+    base_utils.log_info('-' * 40)
 
     # test running speed
     if test_speed:
@@ -238,88 +229,40 @@ def profile(opt, lr_size, test_speed=False):
         for i in range(n_test):
             start_time = time.time()
             with torch.no_grad():
-                _ = net_G(**dummy_input_dict)
+                _ = net_G.step(**dummy_input_dict)
             end_time = time.time()
             tot_time += end_time - start_time
 
-        logger.info('Speed (FPS): {:.3f} (averaged for {} runs)'.format(
+        base_utils.log_info('Speed (FPS): {:.3f} (averaged for {} runs)'.format(
             n_test / tot_time, n_test))
-        logger.info('-' * 40)
+        base_utils.log_info('-' * 40)
 
 
 if __name__ == '__main__':
-    # ----------------- parse arguments ----------------- #
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--exp_dir', type=str, required=True,
-                        help='directory of the current experiment')
-    parser.add_argument('--mode', type=str, required=True,
-                        help='which mode to use (train|test|profile)')
-    parser.add_argument('--model', type=str, required=True,
-                        help='which model to use (FRVSR|TecoGAN)')
-    parser.add_argument('--opt', type=str, required=True,
-                        help='path to the option yaml file')
-    parser.add_argument('--gpu_id', type=int, default=-1,
-                        help='GPU index, -1 for CPU')
-    parser.add_argument('--lr_size', type=str, default='3x256x256',
-                        help='size of the input frame')
-    parser.add_argument('--test_speed', action='store_true',
-                        help='whether to test the actual running speed')
-    args = parser.parse_args()
+    # --- parse arguments --- #
+    args = base_utils.parse_agrs()
 
+    # --- generic settings --- #
+    # parse configs, set device, set ramdom seed
+    opt = base_utils.parse_configs(args)
 
-    # ----------------- get options ----------------- #
-    with open(osp.join(args.exp_dir, args.opt), 'r') as f:
-        opt = yaml.load(f.read(), Loader=yaml.FullLoader)
-
-
-    # ----------------- general configs ----------------- #
-    # experiment dir
-    opt['exp_dir'] = args.exp_dir
-
-    # random seed
-    base_utils.setup_random_seed(opt['manual_seed'])
-
-    # logger
+    # set logger
     base_utils.setup_logger('base')
-    opt['verbose'] = opt.get('verbose', False)
 
-    # device
-    if args.gpu_id >= 0:
-        os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu_id)
-        if torch.cuda.is_available():
-            torch.backends.cudnn.deterministic = True
-            torch.backends.cudnn.benchmark = False
-            opt['device'] = 'cuda'
-        else:
-            opt['device'] = 'cpu'
-    else:
-        opt['device'] = 'cpu'
+    # set dirs
+    base_utils.setup_paths(opt, args.mode)
 
-
-    # ----------------- train ----------------- #
+    # --- train --- #
     if args.mode == 'train':
-        # setup paths
-        base_utils.setup_paths(opt, mode='train')
-
-        # run
-        opt['is_train'] = True
         train(opt)
 
-    # ----------------- test ----------------- #
+    # --- test --- #
     elif args.mode == 'test':
-        # setup paths
-        base_utils.setup_paths(opt, mode='test')
-
-        # run
-        opt['is_train'] = False
         test(opt)
 
-    # ----------------- profile ----------------- #
+    # --- profile --- #
     elif args.mode == 'profile':
-        lr_size = tuple(map(int, args.lr_size.split('x')))
-
-        # run
-        profile(opt, lr_size, args.test_speed)
+        profile(opt, args.lr_size, args.test_speed)
 
     else:
         raise ValueError(

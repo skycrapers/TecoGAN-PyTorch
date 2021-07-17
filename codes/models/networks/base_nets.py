@@ -6,18 +6,23 @@ class BaseSequenceGenerator(nn.Module):
         super(BaseSequenceGenerator, self).__init__()
 
     def generate_dummy_input(self, lr_size):
-        """ use for compute per-step FLOPs and speed
-            return random tensors that can be taken as input of <forward>
+        """ Generate random tensors that can be taken as input of <step>
+            This is used for computing per-step FLOPs and speed
         """
         return None
 
     def forward(self, *args, **kwargs):
-        """ forward pass for a singe frame
+        """ interface (support DDP)
         """
         pass
 
     def forward_sequence(self, lr_data):
         """ forward pass for a whole sequence (for training)
+        """
+        pass
+
+    def step(self, *args, **kwargs):
+        """ forward pass for a single frame
         """
         pass
 
@@ -32,6 +37,11 @@ class BaseSequenceDiscriminator(nn.Module):
         super(BaseSequenceDiscriminator, self).__init__()
 
     def forward(self, *args, **kwargs):
+        """ interface (support DDP)
+        """
+        pass
+
+    def step(self, *args, **kwargs):
         """ forward pass for a singe frame
         """
         pass

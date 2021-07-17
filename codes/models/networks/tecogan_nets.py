@@ -141,7 +141,7 @@ class SRNet(nn.Module):
 
 
 class FRNet(BaseSequenceGenerator):
-    """ Frame-recurrent network proposed in https://arxiv.org/abs/1801.04590
+    """ Frame-recurrent network: https://arxiv.org/abs/1801.04590
     """
 
     def __init__(self, in_nc=3, out_nc=3, nf=64, nb=16, degradation='BI',
@@ -150,55 +150,20 @@ class FRNet(BaseSequenceGenerator):
 
         self.scale = scale
 
-        # get upsampling function according to the degradation mode
+        # get upsampling function according to degradation type
         self.upsample_func = get_upsampling_func(self.scale, degradation)
 
         # define fnet & srnet
         self.fnet = FNet(in_nc)
         self.srnet = SRNet(in_nc, out_nc, nf, nb, self.upsample_func)
 
-    def generate_dummy_input(self, lr_size):
-        c, lr_h, lr_w = lr_size
-        s = self.scale
+    def forward(self, lr_data, device=None):
+        if self.training:
+            out = self.forward_sequence(lr_data)
+        else:
+            out = self.infer_sequence(lr_data, device)
 
-        lr_curr = torch.rand(1, c, lr_h, lr_w, dtype=torch.float32)
-        lr_prev = torch.rand(1, c, lr_h, lr_w, dtype=torch.float32)
-        hr_prev = torch.rand(1, c, s * lr_h, s * lr_w, dtype=torch.float32)
-
-        data_dict = {
-            'lr_curr': lr_curr,
-            'lr_prev': lr_prev,
-            'hr_prev': hr_prev
-        }
-
-        return data_dict
-
-    def forward(self, lr_curr, lr_prev, hr_prev):
-        """
-            Parameters:
-                :param lr_curr: the current lr data in shape nchw
-                :param lr_prev: the previous lr data in shape nchw
-                :param hr_prev: the previous hr data in shape nc(4h)(4w)
-        """
-
-        # estimate lr flow (lr_curr -> lr_prev)
-        lr_flow = self.fnet(lr_curr, lr_prev)
-
-        # pad if size is not a multiple of 8
-        pad_h = lr_curr.size(2) - lr_curr.size(2) // 8 * 8
-        pad_w = lr_curr.size(3) - lr_curr.size(3) // 8 * 8
-        lr_flow_pad = F.pad(lr_flow, (0, pad_w, 0, pad_h), 'reflect')
-
-        # upsample lr flow
-        hr_flow = self.scale * self.upsample_func(lr_flow_pad)
-
-        # warp hr_prev
-        hr_prev_warp = backward_warp(hr_prev, hr_flow)
-
-        # compute hr_curr
-        hr_curr = self.srnet(lr_curr, space_to_depth(hr_prev_warp, self.scale))
-
-        return hr_curr
+        return out
 
     def forward_sequence(self, lr_data):
         """
@@ -253,6 +218,33 @@ class FRNet(BaseSequenceGenerator):
 
         return ret_dict
 
+    def step(self, lr_curr, lr_prev, hr_prev):
+        """
+            Parameters:
+                :param lr_curr: the current lr data in shape nchw
+                :param lr_prev: the previous lr data in shape nchw
+                :param hr_prev: the previous hr data in shape nc(4h)(4w)
+        """
+
+        # estimate lr flow (lr_curr -> lr_prev)
+        lr_flow = self.fnet(lr_curr, lr_prev)
+
+        # pad if size is not a multiple of 8
+        pad_h = lr_curr.size(2) - lr_curr.size(2)//8*8
+        pad_w = lr_curr.size(3) - lr_curr.size(3)//8*8
+        lr_flow_pad = F.pad(lr_flow, (0, pad_w, 0, pad_h), 'reflect')
+
+        # upsample lr flow
+        hr_flow = self.scale*self.upsample_func(lr_flow_pad)
+
+        # warp hr_prev
+        hr_prev_warp = backward_warp(hr_prev, hr_flow)
+
+        # compute hr_curr
+        hr_curr = self.srnet(lr_curr, space_to_depth(hr_prev_warp, self.scale))
+
+        return hr_curr
+
     def infer_sequence(self, lr_data, device):
         """
             Parameters:
@@ -262,7 +254,7 @@ class FRNet(BaseSequenceGenerator):
                 :return hr_seq: uint8 np.ndarray in shape tchw
         """
 
-        # setup params
+        # set params
         tot_frm, c, h, w = lr_data.size()
         s = self.scale
 
@@ -272,19 +264,33 @@ class FRNet(BaseSequenceGenerator):
         hr_prev = torch.zeros(
             1, c, s * h, s * w, dtype=torch.float32).to(device)
 
-        for i in range(tot_frm):
-            with torch.no_grad():
-                self.eval()
-
+        with torch.no_grad():
+            for i in range(tot_frm):
                 lr_curr = lr_data[i: i + 1, ...].to(device)
-                hr_curr = self.forward(lr_curr, lr_prev, hr_prev)
+                hr_curr = self.step(lr_curr, lr_prev, hr_prev)
                 lr_prev, hr_prev = lr_curr, hr_curr
 
                 hr_frm = hr_curr.squeeze(0).cpu().numpy()  # chw|rgb|uint8
 
-            hr_seq.append(float32_to_uint8(hr_frm))
+                hr_seq.append(float32_to_uint8(hr_frm))
 
         return np.stack(hr_seq).transpose(0, 2, 3, 1)  # thwc
+
+    def generate_dummy_input(self, lr_size):
+        c, lr_h, lr_w = lr_size
+        s = self.scale
+
+        lr_curr = torch.rand(1, c, lr_h, lr_w, dtype=torch.float32)
+        lr_prev = torch.rand(1, c, lr_h, lr_w, dtype=torch.float32)
+        hr_prev = torch.rand(1, c, s * lr_h, s * lr_w, dtype=torch.float32)
+
+        data_dict = {
+            'lr_curr': lr_curr,
+            'lr_prev': lr_prev,
+            'hr_prev': hr_prev
+        }
+
+        return data_dict
 
 
 
@@ -324,10 +330,11 @@ class DiscriminatorBlocks(nn.Module):
 
 
 class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
-    """ Spatio-Temporal discriminator in proposed in TecoGAN
+    """ Spatio-Temporal discriminator proposed in TecoGAN
     """
 
-    def __init__(self, in_nc=3, spatial_size=128, tempo_range=3, scale=4):
+    def __init__(self, in_nc=3, spatial_size=128, tempo_range=3,
+                 degradation='BI', scale=4):
         super(SpatioTemporalDiscriminator, self).__init__()
 
         # basic settings
@@ -348,14 +355,12 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
         # classifier
         self.dense = nn.Linear(256 * spatial_size // 16 * spatial_size // 16, 1)
 
-    def forward(self, x):
-        out = self.conv_in(x)
-        out, feature_list = self.discriminator_block(out)
+        # get upsampling function according to degradation type
+        self.upsample_func = get_upsampling_func(self.scale, degradation)
 
-        out = out.view(out.size(0), -1)
-        out = self.dense(out)
-
-        return out, feature_list
+    def forward(self, data, args_dict):
+        out = self.forward_sequence(data, args_dict)
+        return out
 
     def forward_sequence(self, data, args_dict):
         """
@@ -363,7 +368,7 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
             :param args_dict: a dict including data/config needed here
         """
 
-        # ------------ setup params ------------ #
+        # --- set params --- #
         net_G = args_dict['net_G']
         lr_data = args_dict['lr_data']
         bi_data = args_dict['bi_data']
@@ -379,8 +384,7 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
         c_size = int(s_size * args_dict['crop_border_ratio'])
         n_pad = (s_size - c_size) // 2
 
-
-        # ------------ compute forward & backward flow ------------ #
+        # --- compute forward & backward flow --- #
         if 'hr_flow_merge' not in args_dict:
             if args_dict['use_pp_crit']:
                 hr_flow_bw = hr_flow[:, 0:t:3, ...]  # e.g., frame1 -> frame0
@@ -395,7 +399,7 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
 
                 # compute forward flow
                 lr_flow_fw = net_G.fnet(lr_curr, lr_next)
-                hr_flow_fw = self.scale * net_G.upsample_func(lr_flow_fw)
+                hr_flow_fw = self.scale * self.upsample_func(lr_flow_fw)
 
                 hr_flow_bw = hr_flow[:, 0:t:3, ...]  # e.g., frame1 -> frame0
                 hr_flow_idle = torch.zeros_like(hr_flow_bw)  # frame1 -> frame1
@@ -412,8 +416,7 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
             # reused data to reduce computations
             hr_flow_merge = args_dict['hr_flow_merge']
 
-
-        # ------------ build up inputs for D (3 parts) ------------ #
+        # --- build up inputs for D (3 parts) --- #
         # part 1: bicubic upsampled data (conditional inputs)
         cond_data = bi_data[:, :t, ...].reshape(n_clip, 3, c, hr_h, hr_w)
         # note: permutation is not necessarily needed here, it's just to keep
@@ -440,10 +443,12 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
         # combine 3 parts together
         input_data = torch.cat([orig_data, warp_data, cond_data], dim=1)
 
-
-        # ------------ classify ------------ #
-        pred = self.forward(input_data)  # out, feature_list
-
+        # --- classify --- #
+        out = self.conv_in(input_data)
+        out, feature_list = self.discriminator_block(out)
+        out = out.view(out.size(0), -1)
+        out = self.dense(out)
+        pred = out, feature_list
 
         # construct output dict (return other data beside pred)
         ret_dict = {
@@ -476,7 +481,11 @@ class SpatialDiscriminator(BaseSequenceDiscriminator):
         # classifier
         self.dense = nn.Linear(256 * spatial_size // 16 * spatial_size // 16, 1)
 
-    def forward(self, x):
+    def forward(self, data, args_dict):
+        out = self.forward_sequence(data, args_dict)
+        return out
+
+    def step(self, x):
         out = self.conv_in(x)
         out, feature_list = self.discriminator_block(out)
 
@@ -486,12 +495,12 @@ class SpatialDiscriminator(BaseSequenceDiscriminator):
         return out, feature_list
 
     def forward_sequence(self, data, args_dict):
-        # ------------ setup params ------------ #
+        # --- setup params --- #
         n, t, c, hr_h, hr_w = data.size()
         data = data.view(n * t, c, hr_h, hr_w)
 
 
-        # ------------ build up inputs for D ------------ #
+        # --- build up inputs for D --- #
         if self.use_cond:
             bi_data = args_dict['bi_data'].view(n * t, c, hr_h, hr_w)
             input_data = torch.cat([bi_data, data], dim=1)
@@ -499,8 +508,8 @@ class SpatialDiscriminator(BaseSequenceDiscriminator):
             input_data = data
 
 
-        # ------------ classify ------------ #
-        pred = self.forward(input_data)
+        # --- classify --- #
+        pred = self.step(input_data)
 
 
         # construct output dict (nothing to return)

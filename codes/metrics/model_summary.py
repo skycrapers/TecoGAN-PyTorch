@@ -43,7 +43,7 @@ def register(model, dummy_input_dict):
     model.apply(register_hook)
 
     # forward
-    _ = model(**dummy_input_dict)
+    _ = model.step(**dummy_input_dict)
 
     # remove hooks
     for hook in registered_hooks:

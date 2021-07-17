@@ -7,14 +7,11 @@ from .vsr_model import VSRModel
 from .networks import define_generator, define_discriminator
 from .networks.vgg_nets import VGGFeatureExtractor
 from .optim import define_criterion, define_lr_schedule
-from utils import net_utils
+from utils import base_utils, net_utils
 
 
 class VSRGANModel(VSRModel):
-    """ A model wraper for subjective video super-resolution
-
-        It contains a generator and a discriminator, as well as relative
-        functions to train and test the generator
+    """ A model wrapper for subjective video super-resolution
     """
 
     def __init__(self, opt):
@@ -23,68 +20,33 @@ class VSRGANModel(VSRModel):
         if self.is_train:
             self.cnt_upd_D = 0
 
-    def set_network(self):
-        # define net G
-        self.net_G = define_generator(self.opt).to(self.device)
-        if self.verbose:
-            self.logger.info('Generator: {}\n'.format(
-                self.opt['model']['generator']['name']) + self.net_G.__str__())
+    def set_networks(self):
+        # define generator
+        self.net_G = define_generator(self.opt)
+        self.net_G = self.model_to_device(self.net_G)
+        base_utils.log_info('Generator: {}\n{}'.format(
+            self.opt['model']['generator']['name'], self.net_G.__str__()))
 
-        # load net G
+        # load generator
         load_path_G = self.opt['model']['generator'].get('load_path')
         if load_path_G is not None:
             self.load_network(self.net_G, load_path_G)
-            if self.verbose:
-                self.logger.info('Loaded generator from: {}'.format(load_path_G))
+            base_utils.log_info('Load generator from: {}'.format(load_path_G))
 
         if self.is_train:
-            # define net D
-            self.net_D = define_discriminator(self.opt).to(self.device)
-            if self.verbose:
-                self.logger.info('Discriminator: {}\n'.format(
-                    self.opt['model']['discriminator']['name']) + self.net_D.__str__())
+            # define discriminator
+            self.net_D = define_discriminator(self.opt)
+            self.net_D = self.model_to_device(self.net_D)
+            base_utils.log_info('Discriminator: {}\n{}'.format(
+                self.opt['model']['discriminator']['name'], self.net_D.__str__()))
 
-            # load net D
+            # load discriminator
             load_path_D = self.opt['model']['discriminator'].get('load_path')
             if load_path_D is not None:
                 self.load_network(self.net_D, load_path_D)
-                if self.verbose:
-                    self.logger.info('Loaded discriminator from: {}'.format(
-                        load_path_D))
+                base_utils.log_info('Load discriminator from: {}'.format(load_path_D))
 
-    def config_training(self):
-        # set criterions
-        self.set_criterion()
-
-        # set optimizer for G
-        lr = self.opt['train']['generator']['lr']
-        weight_decay = self.opt['train']['generator'].get('weight_decay', 0)
-        betas = (
-            self.opt['train']['generator'].get('beta1', 0.9),
-            self.opt['train']['generator'].get('beta2', 0.999))
-        self.optim_G = optim.Adam(
-            self.net_G.parameters(),
-            lr=lr, weight_decay=weight_decay, betas=betas)
-
-        # set optimizer for D
-        lr = self.opt['train']['discriminator']['lr']
-        weight_decay = self.opt['train']['discriminator'].get('weight_decay', 0)
-        betas = (
-            self.opt['train']['discriminator'].get('beta1', 0.9),
-            self.opt['train']['discriminator'].get('beta2', 0.999))
-        self.optim_D = optim.Adam(
-            self.net_D.parameters(),
-            lr=lr, weight_decay=weight_decay, betas=betas)
-
-        # set lr schedules for G
-        lr_schedule = self.opt['train']['generator'].get('lr_schedule')
-        self.sched_G = define_lr_schedule(lr_schedule, self.optim_G)
-
-        # set lr schedules for D
-        lr_schedule = self.opt['train']['discriminator'].get('lr_schedule')
-        self.sched_D = define_lr_schedule(lr_schedule, self.optim_D)
-
-    def set_criterion(self):
+    def set_criterions(self):
         # pixel criterion
         self.pix_crit = define_criterion(
             self.opt['train'].get('pixel_crit'))
@@ -101,10 +63,6 @@ class VSRGANModel(VSRModel):
                 'feature_layers', [8, 17, 26, 35])
             self.net_F = VGGFeatureExtractor(feature_layers).to(self.device)
 
-        # flow & mask criterion
-        self.flow_crit = define_criterion(
-            self.opt['train'].get('flow_crit'))
-
         # ping-pong criterion
         self.pp_crit = define_criterion(
             self.opt['train'].get('pingpong_crit'))
@@ -117,6 +75,30 @@ class VSRGANModel(VSRModel):
         self.gan_crit = define_criterion(
             self.opt['train'].get('gan_crit'))
 
+    def set_optimizers(self):
+        # set optimizer for net_G
+        self.optim_G = optim.Adam(
+            self.net_G.parameters(),
+            lr=self.opt['train']['generator']['lr'],
+            weight_decay=self.opt['train']['generator'].get('weight_decay', 0),
+            betas=self.opt['train']['generator'].get('betas', (0.9, 0.999)))
+
+        # set optimizer for net_D
+        self.optim_D = optim.Adam(
+            self.net_D.parameters(),
+            lr=self.opt['train']['discriminator']['lr'],
+            weight_decay=self.opt['train']['discriminator'].get('weight_decay', 0),
+            betas=self.opt['train']['discriminator'].get('betas', (0.9, 0.999)))
+
+    def set_lr_schedules(self):
+        # set lr schedules for net_G
+        self.sched_G = define_lr_schedule(
+            self.opt['train']['generator'].get('lr_schedule'), self.optim_G)
+
+        # set lr schedules for net_D
+        self.sched_D = define_lr_schedule(
+            self.opt['train']['discriminator'].get('lr_schedule'), self.optim_D)
+
     def train(self, data):
         """ Function for mini-batch training
 
@@ -124,14 +106,15 @@ class VSRGANModel(VSRModel):
                 :param data: a batch of training tensor with shape NTCHW
         """
 
-        # ------------ prepare data ------------ #
+        # --- prepare data --- #
         lr_data, gt_data = data['lr'], data['gt']
 
         n, t, c, lr_h, lr_w = lr_data.size()
         _, _, _, gt_h, gt_w = gt_data.size()
 
         # generate bicubic upsampled data
-        bi_data = self.net_G.upsample_func(
+        upsample_fn = self.get_bare_model(self.net_G).upsample_func
+        bi_data = upsample_fn(
             lr_data.view(n * t, c, lr_h, lr_w)).view(n, t, c, gt_h, gt_w)
 
         # augment data for pingpong criterion
@@ -146,19 +129,19 @@ class VSRGANModel(VSRModel):
             bi_data = torch.cat([bi_data, bi_rev], dim=1)
 
 
-        # ------------ clear optimizers ------------ #
+        # --- clear optimizers --- #
         self.net_G.train()
         self.net_D.train()
         self.optim_G.zero_grad()
         self.optim_D.zero_grad()
 
 
-        # ------------ forward G ------------ #
-        net_G_output_dict = self.net_G.forward_sequence(lr_data)
+        # --- forward G --- #
+        net_G_output_dict = self.net_G(lr_data)
         hr_data = net_G_output_dict['hr_data']
 
 
-        # ------------ forward D ------------ #
+        # --- forward D --- #
         for param in self.net_D.parameters():
             param.requires_grad = True
 
@@ -185,7 +168,7 @@ class VSRGANModel(VSRModel):
             hr_data.detach(), net_D_input_dict)
 
 
-        # ------------ optimize D ------------ #
+        # --- optimize D --- #
         self.log_dict = OrderedDict()
         real_pred_D, fake_pred_D = real_pred[0], fake_pred[0]
 
@@ -224,7 +207,7 @@ class VSRGANModel(VSRModel):
             self.log_dict['n_upd_D'] = self.cnt_upd_D
 
 
-        # ------------ optimize G ------------ #
+        # --- optimize G --- #
         for param in self.net_D.parameters():
             param.requires_grad = False
 
@@ -298,7 +281,7 @@ class VSRGANModel(VSRModel):
 
         # gan loss
         if self.fm_crit is None:
-            fake_pred, _ = self.net_D.forward_sequence(hr_data, net_D_input_dict)
+            fake_pred, _ = self.net_D(hr_data, net_D_input_dict)
         fake_pred_G = fake_pred[0]
 
         gan_w = self.opt['train']['gan_crit'].get('weight', 1)

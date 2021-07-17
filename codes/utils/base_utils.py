@@ -2,9 +2,76 @@ import os
 import os.path as osp
 import random
 import logging
+import argparse
+import yaml
 
 import numpy as np
 import torch
+
+from .dist_utils import init_dist, master_only
+
+
+def parse_agrs():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--exp_dir', type=str, required=True,
+                        help='directory of the current experiment')
+    parser.add_argument('--mode', type=str, required=True,
+                        help='which mode to use (train|test|profile)')
+    parser.add_argument('--opt', type=str, required=True,
+                        help='path to the config yaml file')
+    parser.add_argument('--gpu_ids', type=str, default='-1',
+                        help='GPU index (set -1 to use CPU)')
+    parser.add_argument('--lr_size', type=str, default='3x256x256',
+                        help='size of the input frame')
+    parser.add_argument('--test_speed', action='store_true',
+                        help='whether to test the actual running speed')
+    parser.add_argument('--local_rank', default=-1, type=int,
+                        help='local gpu index')
+    return parser.parse_args()
+
+
+def parse_configs(args):
+    # load option file
+    with open(osp.join(args.exp_dir, args.opt), 'r') as f:
+        opt = yaml.load(f.read(), Loader=yaml.FullLoader)
+
+    opt['exp_dir'] = args.exp_dir
+    opt['is_train'] = (args.mode == 'train')
+
+    # setup device
+    setup_device(opt, args.gpu_ids, args.local_rank)
+
+    # setup random seed
+    setup_random_seed(opt.get('manual_seed', 0))  # TODO: use rank-related seed?
+
+    return opt
+
+
+def setup_device(opt, gpu_ids, local_rank):
+    gpu_ids = tuple(map(int, gpu_ids.split(',')))
+    if gpu_ids[0] < 0 or not torch.cuda.is_available():
+        # cpu settings
+        opt.update({
+            'dist': False,
+            'device': 'cpu',
+            'rank': -1
+        })
+    else:
+        # gpu settings
+        if len(gpu_ids) == 1:
+            # single gpu
+            torch.cuda.set_device(0)
+            opt.update({
+                'dist': False,
+                'device': 'cuda',
+                'rank': -1
+            })
+        else:
+            # multiple gpus
+            init_dist(opt, local_rank)
+
+        torch.backends.cudnn.benchmark = True
+        # torch.backends.cudnn.deterministic = True
 
 
 def setup_random_seed(seed):
@@ -28,17 +95,19 @@ def setup_logger(name):
     base_logger.addHandler(sh)
 
 
-def get_logger(name):
-    return logging.getLogger(name)
+@master_only
+def log_info(msg, logger_name='base'):
+    logger = logging.getLogger(logger_name)
+    logger.info(msg)
 
 
-def print_options(opt, logger, tab=''):
+def print_options(opt, logger_name='base', tab=''):
     for key, val in opt.items():
         if isinstance(val, dict):
-            logger.info('{}{}:'.format(tab, key))
-            print_options(val, logger, tab + '  ')
+            log_info('{}{}:'.format(tab, key), logger_name)
+            print_options(val, logger_name, tab + '  ')
         else:
-            logger.info('{}{}: {}'.format(tab, key, val))
+            log_info('{}{}: {}'.format(tab, key, val), logger_name)
 
 
 def retrieve_files(dir, suffix='png|jpg'):

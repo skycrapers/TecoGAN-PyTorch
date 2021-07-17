@@ -1,19 +1,20 @@
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
 
 from .paired_lmdb_dataset import PairedLMDBDataset
 from .unpaired_lmdb_dataset import UnpairedLMDBDataset
 from .paired_folder_dataset import PairedFolderDataset
 
 
-def create_dataloader(opt, dataset_idx='train'):
+def create_dataloader(opt, phase, idx):
     # setup params
-    data_opt = opt['dataset'].get(dataset_idx)
+    data_opt = opt['dataset'].get(idx)
     degradation_type = opt['dataset']['degradation']['type']
 
-    # -------------- loader for training -------------- #
-    if dataset_idx == 'train':
+    # --- create loader for training --- #
+    if phase == 'train':
         # check dataset
         assert data_opt['name'] in ('VimeoTecoGAN', 'VimeoTecoGAN-sub'), \
             'Unknown Dataset: {}'.format(data_opt['name'])
@@ -41,31 +42,39 @@ def create_dataloader(opt, dataset_idx='train'):
                 moving_factor=opt['train'].get('moving_factor', 1.0))
 
         else:
-            raise ValueError('Unrecognized degradation type: {}'.format(
-                degradation_type))
+            raise ValueError(f'Unrecognized degradation type: {degradation_type}')
 
         # create data loader
+        if opt['dist']:
+            batch_size = data_opt['batch_size'] // opt['world_size']
+            shuffle = False
+            sampler = DistributedSampler(dataset)
+        else:
+            batch_size = data_opt['batch_size']
+            shuffle = True
+            sampler = None
+
         loader = DataLoader(
             dataset=dataset,
-            batch_size=data_opt['batch_size'],
-            shuffle=True,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            drop_last=True,
+            sampler=sampler,
             num_workers=data_opt['num_workers'],
             pin_memory=data_opt['pin_memory'])
 
-    # -------------- loader for testing -------------- #
-    elif dataset_idx.startswith('test'):
+    # --- create loader for testing --- #
+    elif phase == 'test':
         # create data loader
         loader = DataLoader(
-            dataset=PairedFolderDataset(
-                data_opt,
-                scale=opt['scale']),
+            dataset=PairedFolderDataset(data_opt),
             batch_size=1,
             shuffle=False,
             num_workers=data_opt['num_workers'],
             pin_memory=data_opt['pin_memory'])
 
     else:
-        raise ValueError('Unrecognized dataset index: {}'.format(dataset_idx))
+        raise ValueError('Unrecognized phase: {}'.format(phase))
 
     return loader
 
@@ -110,7 +119,6 @@ def prepare_data(opt, data, kernel):
         gt_data = gt_data.view(n, t, c, scale * lr_h, scale * lr_w)
 
     else:
-        raise ValueError('Unrecognized degradation type: {}'.format(
-            degradation_type))
+        raise ValueError(f'Unrecognized degradation type: {degradation_type}')
 
     return { 'gt': gt_data, 'lr': lr_data }
