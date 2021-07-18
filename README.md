@@ -41,7 +41,7 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 
 ## Test
 
-**Note:** We apply different models according to the degradation type of the data. The following steps are for 4x upsampling in BD degradation. You can switch to BI degradation by replacing all `BD` to `BI` below.
+**Note:** We apply different models, varying on the degradation type of the data. The following steps are for 4x upsampling in BD degradation. You can switch to BI degradation by replacing all `BD` to `BI` below.
 
 1. Download the official Vid4 and ToS3 datasets.
 ```bash
@@ -52,7 +52,7 @@ bash ./scripts/download/download_datasets.sh BD
 > * ToS3 Dataset [[Ground-Truth Data](https://drive.google.com/file/d/1XoR_NVBR-LbZOA8fXh7d4oPV0M8fRi8a/view?usp=sharing)] [[Low Resolution Data (BD)](https://drive.google.com/file/d/1rDCe61kR-OykLyCo2Ornd2YgPnul2ffM/view?usp=sharing)] [[Low Resolution Data (BI)](https://drive.google.com/file/d/1FNuC0jajEjH9ycqDkH4cZQ3_eUqjxzzf/view?usp=sharing)] 
 
 The dataset structure is shown as below.
-```tex
+```
 data
   ├─ Vid4
     ├─ GT                # Ground-Truth (GT) video sequences
@@ -73,13 +73,13 @@ data
     └─ Bicubic4xLR
 ```
 
-2. Download our pre-trained TecoGAN model. Note that this model is trained with lesser training data compared with the official one, since we can only retrieve 212 out of 308 videos from the official training dataset.
+2. Download our pre-trained TecoGAN model. Note that this model is trained on lesser training data than the official one, since we can only retrieve 212 out of 308 videos from the official training dataset.
 ```bash
 bash ./scripts/download/download_models.sh BD TecoGAN
 ```
 > Again, you can download the model from [[BD degradation](https://drive.google.com/file/d/13FPxKE6q7tuRrfhTE7GB040jBeURBj58/view?usp=sharing)] or [[BI degradation](https://drive.google.com/file/d/1ie1F7wJcO4mhNWK8nPX7F0LgOoPzCwEu/view?usp=sharing)], and put it under `./pretrained_models`.
 
-3. Super-resolute the LR videos with TecoGAN. The results will be saved at `./results`.
+3. Super-resolve the LR videos with TecoGAN. The results will be saved at `./results`.
 ```bash
 bash ./test.sh BD TecoGAN
 ```
@@ -103,7 +103,7 @@ python ./scripts/create_lmdb.py --dataset VimeoTecoGAN --data_type GT
 ```
 
 The following shows the dataset structure after completing the above two steps.
-```tex
+```
 data
   ├─ VimeoTecoGAN          # Original (raw) dataset
     ├─ scene_2000
@@ -121,7 +121,7 @@ data
     └─ meta_info.pkl       # each key has format: [vid]_[total_frame]x[h]x[w]_[i-th_frame]
 ```
 
-3. **(Optional, this step is needed only for BI degradation)** Manually generate the LR sequences with Matlab's imresize function, and then create LMDB for them.
+3. **(Optional: this step is needed only for BI degradation)** Manually generate the LR sequences with Matlab's imresize function, and then create LMDB for them.
 ```bash
 # Generate the raw LR video sequences. Results will be saved at ./data/Bicubic4xLR
 matlab -nodesktop -nosplash -r "cd ./scripts; generate_lr_BI"
