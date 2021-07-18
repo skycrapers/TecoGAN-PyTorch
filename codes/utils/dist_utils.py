@@ -6,6 +6,8 @@ import torch.multiprocessing as mp
 
 
 def init_dist(opt, local_rank):
+    """ Adopted from BasicSR
+    """
     if mp.get_start_method(allow_none=True) is None:
         mp.set_start_method('spawn')
     torch.cuda.set_device(local_rank)
@@ -23,6 +25,8 @@ def init_dist(opt, local_rank):
 
 
 def get_dist_info():
+    """ Adopted from BasicSR
+    """
     if dist.is_available():
         initialized = dist.is_initialized()
     else:
@@ -39,7 +43,8 @@ def get_dist_info():
 
 
 def master_only(func):
-
+    """ Adopted from BasicSR
+    """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         rank, _ = get_dist_info()

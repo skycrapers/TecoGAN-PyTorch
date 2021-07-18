@@ -43,7 +43,7 @@ def parse_configs(args):
     setup_device(opt, args.gpu_ids, args.local_rank)
 
     # setup random seed
-    setup_random_seed(opt.get('manual_seed', 0) + opt['rank'])  # TODO: use rank-related seed?
+    setup_random_seed(opt.get('manual_seed', 2021) + opt['rank'])  # TODO: use rank-related seed?
 
     return opt
 
@@ -55,7 +55,7 @@ def setup_device(opt, gpu_ids, local_rank):
         opt.update({
             'dist': False,
             'device': 'cpu',
-            'rank': -1
+            'rank': 0
         })
     else:
         # gpu settings
@@ -65,7 +65,7 @@ def setup_device(opt, gpu_ids, local_rank):
             opt.update({
                 'dist': False,
                 'device': 'cuda',
-                'rank': -1
+                'rank': 0
             })
         else:
             # multiple gpus

@@ -302,10 +302,13 @@ class FRNet(BaseSequenceGenerator):
         gflops_dict['FNet'], params_dict['FNet'] = parse_model_info(self.fnet)
 
         # profile module 2: sr module
-        hr_flow = self.scale*self.upsample_func(lr_flow)
+        pad_h = lr_curr.size(2) - lr_curr.size(2)//8*8
+        pad_w = lr_curr.size(3) - lr_curr.size(3)//8*8
+        lr_flow_pad = F.pad(lr_flow, (0, pad_w, 0, pad_h), 'reflect')
+        hr_flow = self.scale*self.upsample_func(lr_flow_pad)
         hr_prev_warp = backward_warp(hr_prev, hr_flow)
-        out = register(self.srnet, [lr_curr, space_to_depth(hr_prev_warp, s)])
-        gflops_dict['SRNet'], params_dict['SRNet'] = parse_model_info(self.sr_module)
+        out = register(self.srnet, [lr_curr, space_to_depth(hr_prev_warp, self.scale)])
+        gflops_dict['SRNet'], params_dict['SRNet'] = parse_model_info(self.srnet)
 
         return gflops_dict, params_dict
 

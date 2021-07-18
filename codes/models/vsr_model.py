@@ -59,11 +59,6 @@ class VSRModel(BaseModel):
             self.opt['train']['generator'].get('lr_schedule'), self.optim_G)
 
     def train(self):
-        """
-            Parameters:
-                :param data: a batch of training data (lr & gt) in shape ntchw
-        """
-
         # --- initialize --- #
         self.net_G.train()
         self.optim_G.zero_grad()

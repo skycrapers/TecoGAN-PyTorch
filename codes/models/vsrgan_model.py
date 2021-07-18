@@ -100,12 +100,6 @@ class VSRGANModel(VSRModel):
             self.opt['train']['discriminator'].get('lr_schedule'), self.optim_D)
 
     def train(self):
-        """ Function for mini-batch training
-
-            Parameters:
-                :param data: a batch of training tensor with shape NTCHW
-        """
-
         # --- prepare data --- #
         lr_data, gt_data = self.lr_data, self.gt_data
 
@@ -128,20 +122,17 @@ class VSRGANModel(VSRModel):
             gt_data = torch.cat([gt_data, gt_rev], dim=1)
             bi_data = torch.cat([bi_data, bi_rev], dim=1)
 
-
-        # --- clear optimizers --- #
+        # --- initialize --- #
         self.net_G.train()
         self.net_D.train()
         self.optim_G.zero_grad()
         self.optim_D.zero_grad()
 
-
-        # --- forward G --- #
+        # --- forward net_G --- #
         net_G_output_dict = self.net_G(lr_data)
         hr_data = net_G_output_dict['hr_data']
 
-
-        # --- forward D --- #
+        # --- forward net_D --- #
         for param in self.net_D.parameters():
             param.requires_grad = True
 
@@ -167,8 +158,7 @@ class VSRGANModel(VSRModel):
         fake_pred, _ = self.net_D.forward_sequence(
             hr_data.detach(), net_D_input_dict)
 
-
-        # --- optimize D --- #
+        # --- optimize net_D --- #
         self.log_dict = OrderedDict()
         real_pred_D, fake_pred_D = real_pred[0], fake_pred[0]
 
@@ -206,8 +196,7 @@ class VSRGANModel(VSRModel):
             self.log_dict['distance'] = distance.item()
             self.log_dict['n_upd_D'] = self.cnt_upd_D
 
-
-        # --- optimize G --- #
+        # --- optimize net_G --- #
         for param in self.net_D.parameters():
             param.requires_grad = False
 
@@ -252,8 +241,8 @@ class VSRGANModel(VSRModel):
         # ping-pong (pp) loss
         if self.pp_crit is not None:
             tempo_extent = self.opt['train']['tempo_extent']
-            hr_data_fw = hr_data[:, :tempo_extent - 1, ...]     # -------->|
-            hr_data_bw = hr_data[:, tempo_extent:, ...].flip(1) # <--------|
+            hr_data_fw = hr_data[:, :tempo_extent - 1, ...]      # -------->|
+            hr_data_bw = hr_data[:, tempo_extent:, ...].flip(1)  # <--------|
 
             pp_w = self.opt['train']['pingpong_crit'].get('weight', 1)
             loss_pp_G = pp_w * self.pp_crit(hr_data_fw, hr_data_bw)

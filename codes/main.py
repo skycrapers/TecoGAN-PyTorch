@@ -183,39 +183,38 @@ def profile(opt, lr_size, test_speed=False):
     # basic configs
     scale = opt['scale']
     device = torch.device(opt['device'])
+    msg = '\n'
 
     torch.backends.cudnn.benchmark = True
     # torch.backends.cudnn.deterministic = False
 
     # logging
     base_utils.print_options(opt['model']['generator'])
-    base_utils.log_info(
-        f'{"*"*40}\nOriginal resolution: {lr_size} (To perform 4x SR)')
+    msg += f'{"*"*40}\nOriginal resolution: {lr_size} (To perform {scale}x SR)'
 
     # create model
     net_G = define_generator(opt).to(device)
     # base_utils.log_info(f'\n{net_G.__str__()}')
 
     # profile
+    lr_size = tuple(map(int, lr_size.split('x')))
     gflops_dict, params_dict = net_G.profile(lr_size, device)
 
     gflops_all, params_all = 0, 0
     for module_name in gflops_dict.keys():
-        base_utils.log_info(f'{"-"*40}\nModule: [{module_name}]')
         gflops, params = gflops_dict[module_name], params_dict[module_name]
-        base_utils.log_info(f'    FLOPs (10^9): {gflops:.3f}')
-        base_utils.log_info(f'    Parameters (10^6): {params/1e6:.3f}')
+        msg += f'\n{"-"*40}\nModule: [{module_name}]'
+        msg += f'\n    FLOPs (10^9): {gflops:.3f}'
+        msg += f'\n    Parameters (10^6): {params/1e6:.3f}'
         gflops_all += gflops
         params_all += params
-    base_utils.log_info(f'{"-"*40}\nOverall')
-    base_utils.log_info(f'    FLOPs (10^9): {gflops_all:.3f}')
-    base_utils.log_info(f'    Parameters (10^6): {params_all/1e6:.3f}\n{"*"*40}')
+    msg += f'\n{"-"*40}\nOverall'
+    msg += f'\n    FLOPs (10^9): {gflops_all:.3f}'
+    msg += f'\n    Parameters (10^6): {params_all/1e6:.3f}\n{"*"*40}'
 
     # test running speed
     if test_speed:
-        n_test = 30
-        tot_time = 0
-
+        n_test, tot_time = 30, 0
         for i in range(n_test):
             dummy_input_list = net_G.generate_dummy_data(lr_size, device)
 
@@ -228,9 +227,9 @@ def profile(opt, lr_size, test_speed=False):
             # ---
             end_time = time.time()
             tot_time += end_time - start_time
+        msg += f'\nSpeed: {n_test/tot_time:.3f} FPS (averaged over {n_test} runs)\n{"*"*40}'
 
-        base_utils.log_info(
-            f'Speed: {n_test/tot_time:.3f} FPS (averaged over {n_test} runs)\n{"*"*40}')
+    base_utils.log_info(msg)
 
 
 if __name__ == '__main__':
