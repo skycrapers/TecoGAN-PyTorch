@@ -99,7 +99,7 @@ class VSRGANModel(VSRModel):
         self.sched_D = define_lr_schedule(
             self.opt['train']['discriminator'].get('lr_schedule'), self.optim_D)
 
-    def train(self, data):
+    def train(self):
         """ Function for mini-batch training
 
             Parameters:
@@ -107,7 +107,7 @@ class VSRGANModel(VSRModel):
         """
 
         # --- prepare data --- #
-        lr_data, gt_data = data['lr'], data['gt']
+        lr_data, gt_data = self.lr_data, self.gt_data
 
         n, t, c, lr_h, lr_w = lr_data.size()
         _, _, _, gt_h, gt_w = gt_data.size()

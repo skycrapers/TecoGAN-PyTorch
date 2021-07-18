@@ -8,9 +8,9 @@ import torch
 import torch.nn.functional as F
 
 
-def create_kernel(opt):
-    sigma = opt['dataset']['degradation'].get('sigma', 1.5)
-    ksize = 1 + 2 * int(sigma * 3.0)
+def create_kernel(sigma, ksize=None):
+    if ksize is None:
+        ksize = 1 + 2 * int(sigma * 3.0)
 
     gkern1d = signal.gaussian(ksize, std=sigma).reshape(ksize, 1)
     gkern2d = np.outer(gkern1d, gkern1d)
@@ -22,8 +22,7 @@ def create_kernel(opt):
         [zero_kernel, gaussian_kernel, zero_kernel],
         [zero_kernel, zero_kernel, gaussian_kernel]])
 
-    device = torch.device(opt['device'])
-    kernel = torch.from_numpy(kernel).to(device)
+    kernel = torch.from_numpy(kernel)
 
     return kernel
 
@@ -63,9 +62,9 @@ def float32_to_uint8(inputs):
 
 
 def canonicalize(data):
-    """ Convert data to torch tensor with type float32
+    """ Convert data to torch float32 tensor
 
-        Assume data has type np.uint8/np.float32 or torch.uint8/torch.float32,
+        Assume the input data has type np.uint8/np.float32 or torch.uint8/torch.float32,
         and uint8 data ranges in [0, 255] and float32 data ranges in [0, 1]
     """
 

@@ -24,7 +24,7 @@ def parse_agrs():
     parser.add_argument('--lr_size', type=str, default='3x256x256',
                         help='size of the input frame')
     parser.add_argument('--test_speed', action='store_true',
-                        help='whether to test the actual running speed')
+                        help='whether to test speed')
     parser.add_argument('--local_rank', default=-1, type=int,
                         help='local gpu index')
     return parser.parse_args()
@@ -36,13 +36,14 @@ def parse_configs(args):
         opt = yaml.load(f.read(), Loader=yaml.FullLoader)
 
     opt['exp_dir'] = args.exp_dir
+    opt['gpu_ids'] = args.gpu_ids
     opt['is_train'] = (args.mode == 'train')
 
     # setup device
     setup_device(opt, args.gpu_ids, args.local_rank)
 
     # setup random seed
-    setup_random_seed(opt.get('manual_seed', 0))  # TODO: use rank-related seed?
+    setup_random_seed(opt.get('manual_seed', 0) + opt['rank'])  # TODO: use rank-related seed?
 
     return opt
 

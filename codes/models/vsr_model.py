@@ -58,31 +58,27 @@ class VSRModel(BaseModel):
         self.sched_G = define_lr_schedule(
             self.opt['train']['generator'].get('lr_schedule'), self.optim_G)
 
-    def train(self, data):
-        """ Function of mini-batch training
-
+    def train(self):
+        """
             Parameters:
                 :param data: a batch of training data (lr & gt) in shape ntchw
         """
 
-        # --- prepare data --- #
-        lr_data, gt_data = data['lr'], data['gt']
-
-        # --- clear optim --- #
+        # --- initialize --- #
         self.net_G.train()
         self.optim_G.zero_grad()
 
-        # --- forward G --- #
-        net_G_output_dict = self.net_G(lr_data)
+        # --- forward net_G --- #
+        net_G_output_dict = self.net_G(self.lr_data)
         hr_data = net_G_output_dict['hr_data']
 
-        # --- optimize G --- #
+        # --- optimize net_G --- #
         loss_G = 0
         self.log_dict = OrderedDict()
 
         # pixel loss
         pix_w = self.opt['train']['pixel_crit'].get('weight', 1)
-        loss_pix_G = pix_w * self.pix_crit(hr_data, gt_data)
+        loss_pix_G = pix_w * self.pix_crit(hr_data, self.gt_data)
         loss_G += loss_pix_G
         self.log_dict['l_pix_G'] = loss_pix_G.item()
 
@@ -104,11 +100,10 @@ class VSRModel(BaseModel):
         self.optim_G.step()
 
     def infer(self, lr_data):
-        """ Function of inference
-
+        """
             Parameters:
                 :param lr_data: a rgb video sequence with shape thwc
-                :return: a rgb video sequence with type np.uint8 and shape thwc
+                :return: video sequence (type np.uint8 and shape thwc)
         """
 
         # canonicalize
@@ -121,7 +116,7 @@ class VSRModel(BaseModel):
         # infer
         self.net_G.eval()
         hr_seq = self.net_G(lr_data, self.device)
-        hr_seq = hr_seq[n_pad_front:, ...]
+        hr_seq = hr_seq[n_pad_front:]
 
         return hr_seq
 

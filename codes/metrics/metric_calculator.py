@@ -6,8 +6,10 @@ from collections import OrderedDict
 import numpy as np
 import cv2
 import torch
+import torch.distributed as dist
 
 from utils import base_utils, data_utils, net_utils
+from utils.dist_utils import master_only
 from .LPIPS.models.dist_model import DistModel
 
 
@@ -27,23 +29,20 @@ class MetricCalculator():
         # initialize
         self.metric_opt = opt['metric']
         self.device = torch.device(opt['device'])
+        self.rank = opt['rank']
+        self.dist = opt['dist']
 
-        self.psnr_mult = 1
         self.psnr_colorspace = ''
-        self.lpips_mult = 1
         self.dm = None
-        self.tof_mult = 1
 
         self.reset()
 
         # update configs for each metric
         for metric_type, cfg in self.metric_opt.items():
             if metric_type.lower() == 'psnr':
-                self.psnr_mult = cfg.get('mult', self.psnr_mult)
                 self.psnr_colorspace = cfg['colorspace']
 
             if metric_type.lower() == 'lpips':
-                self.lpips_mult = cfg.get('mult', self.lpips_mult)
                 self.dm = DistModel()
                 self.dm.initialize(
                     model=cfg['model'],
@@ -53,9 +52,6 @@ class MetricCalculator():
                     use_gpu=(opt['device'] == 'cuda'),
                     gpu_ids=[0],
                     version=cfg['version'])
-
-            if metric_type.lower() == 'tof':
-                self.tof_mult = cfg.get('mult', self.tof_mult)
 
     def reset(self):
         self.reset_per_sequence()
@@ -68,19 +64,30 @@ class MetricCalculator():
         self.true_img_pre = None
         self.pred_img_pre = None
 
-    def get_averaged_results(self):
-        metric_avg_dict = {}
+    def get_averaged_results(self, num_seq):
+        self.metric_avg_dict = {
+            metric_type: torch.zeros(1, dtype=torch.float32, device=self.device)
+            for metric_type in self.metric_opt.keys()
+        }
 
         for metric_type in self.metric_opt.keys():
             metric_avg_per_seq = []
             for seq, metric_dict_per_seq in self.metric_dict.items():
                 metric_avg_per_seq.append(
                     np.mean(metric_dict_per_seq[metric_type]))
+            self.metric_avg_dict[metric_type] += np.sum(metric_avg_per_seq)
 
-            metric_avg_dict[metric_type] = np.mean(metric_avg_per_seq)
+        # collect results from all device
+        if self.dist:
+            for _, tensor in self.metric_avg_dict.items():
+                dist.reduce(tensor, dst=0)
+            dist.barrier()
 
-        return metric_avg_dict
+        # average results of all seq
+        for metric in self.metric_avg_dict.keys():
+            self.metric_avg_dict[metric] /= num_seq
 
+    @master_only
     def display_results(self):
         logger = base_utils.get_logger('base')
 
@@ -88,19 +95,15 @@ class MetricCalculator():
         for seq, metric_dict_per_seq in self.metric_dict.items():
             logger.info('Sequence: {}'.format(seq))
             for metric_type in self.metric_opt.keys():
-                mult = getattr(self, '{}_mult'.format(metric_type.lower()))
-                logger.info('\t{}: {:.6f} (x{})'.format(
-                    metric_type,
-                    mult*np.mean(metric_dict_per_seq[metric_type]), mult))
+                logger.info('\t{}: {:.6f}'.format(
+                    metric_type, np.mean(metric_dict_per_seq[metric_type])))
 
         # average results
         logger.info('Average')
-        metric_avg_dict = self.get_averaged_results()
-        for metric_type, avg_result in metric_avg_dict.items():
-            mult = getattr(self, '{}_mult'.format(metric_type.lower()))
-            logger.info('\t{}: {:.6f} (x{})'.format(
-                metric_type, mult*avg_result, mult))
+        for metric_type, avg_result in self.metric_avg_dict.items():
+            logger.info('\t{}: {:.6f}'.format(metric_type, avg_result.item()))
 
+    @master_only
     def save_results(self, model_idx, save_path, override=False):
         # load previous results if existed
         if osp.exists(save_path):
@@ -113,13 +116,12 @@ class MetricCalculator():
         if model_idx not in json_dict:
             json_dict[model_idx] = dict()
 
-        metric_avg_dict = self.get_averaged_results()
-        for metric_type, avg_result in metric_avg_dict.items():
-            # whether to override or skip when this metric already exists
+        for metric_type, avg_result in self.metric_avg_dict.items():
+            # override or skip
             if metric_type in json_dict[model_idx] and not override:
                 continue
 
-            json_dict[model_idx][metric_type] = '{:.6f}'.format(avg_result)
+            json_dict[model_idx][metric_type] = f'{avg_result.item():.6f}'
 
         # sort
         json_dict = OrderedDict(sorted(
@@ -149,7 +151,6 @@ class MetricCalculator():
 
     def compute_sequence_metrics(self, seq, true_seq_dir, pred_seq_dir,
                                  pred_seq=None):
-
         # clear
         self.reset_per_sequence()
 

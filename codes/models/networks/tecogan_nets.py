@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -7,6 +9,7 @@ from .base_nets import BaseSequenceGenerator, BaseSequenceDiscriminator
 from utils.net_utils import space_to_depth, backward_warp, get_upsampling_func
 from utils.net_utils import initialize_weights
 from utils.data_utils import float32_to_uint8
+from metrics.model_summary import register, parse_model_info
 
 
 # -------------------- generator modules -------------------- #
@@ -276,22 +279,35 @@ class FRNet(BaseSequenceGenerator):
 
         return np.stack(hr_seq).transpose(0, 2, 3, 1)  # thwc
 
-    def generate_dummy_input(self, lr_size):
+    def generate_dummy_data(self, lr_size, device):
         c, lr_h, lr_w = lr_size
         s = self.scale
 
-        lr_curr = torch.rand(1, c, lr_h, lr_w, dtype=torch.float32)
-        lr_prev = torch.rand(1, c, lr_h, lr_w, dtype=torch.float32)
-        hr_prev = torch.rand(1, c, s * lr_h, s * lr_w, dtype=torch.float32)
+        # generate dummy input data
+        lr_curr = torch.rand(1, c, lr_h, lr_w, dtype=torch.float32).to(device)
+        lr_prev = torch.rand(1, c, lr_h, lr_w, dtype=torch.float32).to(device)
+        hr_prev = torch.rand(1, c, s*lr_h, s*lr_w, dtype=torch.float32).to(device)
 
-        data_dict = {
-            'lr_curr': lr_curr,
-            'lr_prev': lr_prev,
-            'hr_prev': hr_prev
-        }
+        data_list = [lr_curr, lr_prev, hr_prev]
+        return data_list
 
-        return data_dict
+    def profile(self, lr_size, device):
+        gflops_dict, params_dict = OrderedDict(), OrderedDict()
 
+        # generate dummy input data
+        lr_curr, lr_prev, hr_prev = self.generate_dummy_data(lr_size, device)
+
+        # profile module 1: flow estimation module
+        lr_flow = register(self.fnet, [lr_curr, lr_prev])
+        gflops_dict['FNet'], params_dict['FNet'] = parse_model_info(self.fnet)
+
+        # profile module 2: sr module
+        hr_flow = self.scale*self.upsample_func(lr_flow)
+        hr_prev_warp = backward_warp(hr_prev, hr_flow)
+        out = register(self.srnet, [lr_curr, space_to_depth(hr_prev_warp, s)])
+        gflops_dict['SRNet'], params_dict['SRNet'] = parse_model_info(self.sr_module)
+
+        return gflops_dict, params_dict
 
 
 # ------------------ discriminator modules ------------------ #
