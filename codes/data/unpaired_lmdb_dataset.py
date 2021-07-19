@@ -20,7 +20,7 @@ class UnpairedLMDBDataset(BaseDataset):
         self.keys = sorted(meta['keys'])
 
         # use partial videos
-        if self.filter_file is not None:
+        if hasattr(self, 'filter_file') and self.filter_file is not None:
             with open(self.filter_file, 'r') as f:
                 sel_seqs = { line.strip() for line in f }
             self.keys = list(filter(

@@ -384,7 +384,7 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
     def forward_sequence(self, data, args_dict):
         """
             :param data: should be either hr_data or gt_data
-            :param args_dict: a dict including data/config needed here
+            :param args_dict: a dict including data/config required here
         """
 
         # --- set params --- #

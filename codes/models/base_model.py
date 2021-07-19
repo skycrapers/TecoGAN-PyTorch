@@ -2,6 +2,7 @@ from collections import OrderedDict
 import os.path as osp
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
@@ -97,8 +98,9 @@ class BaseModel():
     def model_to_device(self, net):
         net = net.to(self.device)
         if self.dist:
+            net = nn.SyncBatchNorm.convert_sync_batchnorm(net)
             net = DistributedDataParallel(
-                net, device_ids=[torch.cuda.current_device()])
+                net, device_ids=[torch.cuda.current_device()], broadcast_buffers=False)
         return net
 
     def update_learning_rate(self):

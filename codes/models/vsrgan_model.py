@@ -2,12 +2,14 @@ from collections import OrderedDict
 
 import torch
 import torch.optim as optim
+import torch.distributed as dist
 
 from .vsr_model import VSRModel
 from .networks import define_generator, define_discriminator
 from .networks.vgg_nets import VGGFeatureExtractor
 from .optim import define_criterion, define_lr_schedule
-from utils import base_utils, net_utils
+from utils import base_utils, net_utils, dist_utils
+from utils.base_utils import log_info
 
 
 class VSRGANModel(VSRModel):
@@ -127,6 +129,7 @@ class VSRGANModel(VSRModel):
         self.net_D.train()
         self.optim_G.zero_grad()
         self.optim_D.zero_grad()
+        self.log_dict = OrderedDict()
 
         # --- forward net_G --- #
         net_G_output_dict = self.net_G(lr_data)
@@ -148,31 +151,35 @@ class VSRGANModel(VSRModel):
         net_D_input_dict.update(net_G_output_dict)
 
         # forward real sequence (gt)
-        real_pred, net_D_oputput_dict = self.net_D.forward_sequence(
-            gt_data, net_D_input_dict)
+        real_pred, net_D_oputput_dict = self.net_D(gt_data, net_D_input_dict)
 
         # reuse internal data (e.g., lr optical flow) to reduce computations
         net_D_input_dict.update(net_D_oputput_dict)
 
         # forward fake sequence (hr)
-        fake_pred, _ = self.net_D.forward_sequence(
-            hr_data.detach(), net_D_input_dict)
+        fake_pred, _ = self.net_D(hr_data.detach(), net_D_input_dict)
 
         # --- optimize net_D --- #
-        self.log_dict = OrderedDict()
         real_pred_D, fake_pred_D = real_pred[0], fake_pred[0]
 
         # select D update policy
         update_policy = self.opt['train']['discriminator']['update_policy']
         if update_policy == 'adaptive':
             # update D adaptively
-            logged_real_pred_D = torch.log(torch.sigmoid(real_pred_D) + 1e-8)
-            logged_fake_pred_D = torch.log(torch.sigmoid(fake_pred_D) + 1e-8)
+            logged_real_pred_D = torch.log(torch.sigmoid(real_pred_D) + 1e-8).mean()
+            logged_fake_pred_D = torch.log(torch.sigmoid(fake_pred_D) + 1e-8).mean()
 
-            distance = logged_real_pred_D.mean() - logged_fake_pred_D.mean()
+            if self.dist:
+                # synchronize
+                dist.all_reduce(logged_real_pred_D)
+                dist.all_reduce(logged_fake_pred_D)
+                dist.barrier()
 
-            threshold = self.opt['train']['discriminator']['update_threshold']
-            upd_D = distance.item() < threshold
+                logged_real_pred_D /= self.opt['world_size']
+                logged_fake_pred_D /= self.opt['world_size']
+
+            distance = (logged_real_pred_D - logged_fake_pred_D).item()
+            upd_D = distance < self.opt['train']['discriminator']['update_threshold']
         else:
             upd_D = True
 
@@ -193,7 +200,7 @@ class VSRGANModel(VSRModel):
         self.log_dict['p_real_D'] = real_pred_D.mean().item()
         self.log_dict['p_fake_D'] = fake_pred_D.mean().item()
         if update_policy == 'adaptive':
-            self.log_dict['distance'] = distance.item()
+            self.log_dict['distance'] = distance
             self.log_dict['n_upd_D'] = self.cnt_upd_D
 
         # --- optimize net_G --- #
@@ -251,7 +258,7 @@ class VSRGANModel(VSRModel):
 
         # feature matching (fm) loss
         if self.fm_crit is not None:
-            fake_pred, _ = self.net_D.forward_sequence(hr_data, net_D_input_dict)
+            fake_pred, _ = self.net_D(hr_data, net_D_input_dict)
             fake_feat_lst, real_feat_lst = fake_pred[-1], real_pred[-1]
 
             layer_norm = self.opt['train']['feature_matching_crit'].get(
