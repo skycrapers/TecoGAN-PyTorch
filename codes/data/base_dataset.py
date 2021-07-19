@@ -10,7 +10,7 @@ class BaseDataset(Dataset):
         for kw, args in data_opt.items():
             setattr(self, kw, args)
 
-        # can override options defined in data_opt
+        # can be used to override options defined in data_opt
         for kw, args in kwargs.items():
             setattr(self, kw, args)
 
@@ -23,8 +23,7 @@ class BaseDataset(Dataset):
     def check_info(self, gt_keys, lr_keys):
         if len(gt_keys) != len(lr_keys):
             raise ValueError(
-                'GT & LR contain different numbers of images ({}  vs. {})'.format(
-                    len(gt_keys), len(lr_keys)))
+                f'GT & LR contain different numbers of images ({len(gt_keys)}  vs. {len(lr_keys)})')
 
         for i, (gt_key, lr_key) in enumerate(zip(gt_keys, lr_keys)):
             gt_info = self.parse_lmdb_key(gt_key)
@@ -32,21 +31,18 @@ class BaseDataset(Dataset):
 
             if gt_info[0] != lr_info[0]:
                 raise ValueError(
-                    'video index mismatch ({} vs. {} for the {} key)'.format(
-                        gt_info[0], lr_info[0], i))
+                    f'video index mismatch ({gt_info[0]} vs. {lr_info[0]} for the {i} key)')
 
             gt_num, gt_h, gt_w = gt_info[1]
             lr_num, lr_h, lr_w = lr_info[1]
             s = self.scale
             if (gt_num != lr_num) or (gt_h != lr_h * s) or (gt_w != lr_w * s):
                 raise ValueError(
-                    'video size mismatch ({} vs. {} for the {} key)'.format(
-                        gt_info[1], lr_info[1], i))
+                    f'video size mismatch ({gt_info[1]} vs. {lr_info[1]} for the {i} key)')
 
             if gt_info[2] != lr_info[2]:
                 raise ValueError(
-                    'frame mismatch ({} vs. {} for the {} key)'.format(
-                        gt_info[2], lr_info[2], i))
+                    f'frame mismatch ({gt_info[2]} vs. {lr_info[2]} for the {i} key)')
 
     @staticmethod
     def init_lmdb(seq_dir):

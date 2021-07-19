@@ -134,6 +134,7 @@ class BaseModel():
 
     def reduce_log(self):
         if self.dist:
+            rank, world_size = self.opt['rank'], self.opt['world_size']
             with torch.no_grad():
                 keys, vals = [], []
                 for key, val in self.log_dict.items():
@@ -141,6 +142,8 @@ class BaseModel():
                     vals.append(val)
                 vals = torch.FloatTensor(vals).to(self.device)
                 dist.reduce(vals, dst=0)
+                if rank == 0:  # average
+                    vals /= world_size
                 self.log_dict = {key: val.item() for key, val in zip(keys, vals)}
 
     def get_current_log(self):

@@ -307,7 +307,7 @@ class FRNet(BaseSequenceGenerator):
         lr_flow_pad = F.pad(lr_flow, (0, pad_w, 0, pad_h), 'reflect')
         hr_flow = self.scale*self.upsample_func(lr_flow_pad)
         hr_prev_warp = backward_warp(hr_prev, hr_flow)
-        out = register(self.srnet, [lr_curr, space_to_depth(hr_prev_warp, self.scale)])
+        _ = register(self.srnet, [lr_curr, space_to_depth(hr_prev_warp, self.scale)])
         gflops_dict['SRNet'], params_dict['SRNet'] = parse_model_info(self.srnet)
 
         return gflops_dict, params_dict
@@ -518,7 +518,6 @@ class SpatialDiscriminator(BaseSequenceDiscriminator):
         n, t, c, hr_h, hr_w = data.size()
         data = data.view(n * t, c, hr_h, hr_w)
 
-
         # --- build up inputs for D --- #
         if self.use_cond:
             bi_data = args_dict['bi_data'].view(n * t, c, hr_h, hr_w)
@@ -526,10 +525,8 @@ class SpatialDiscriminator(BaseSequenceDiscriminator):
         else:
             input_data = data
 
-
         # --- classify --- #
         pred = self.step(input_data)
-
 
         # construct output dict (nothing to return)
         ret_dict = {}

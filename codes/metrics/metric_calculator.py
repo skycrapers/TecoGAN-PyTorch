@@ -258,4 +258,3 @@ class MetricCalculator():
         tOF = np.mean(np.sqrt(np.sum(diff_OF**2, axis=-1)))
 
         return tOF
-

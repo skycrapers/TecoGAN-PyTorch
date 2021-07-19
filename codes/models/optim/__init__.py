@@ -30,8 +30,7 @@ def define_criterion(criterion_opt):
         criterion = LSGANLoss(reduction=criterion_opt['reduction'])
 
     else:
-        raise ValueError('Unrecognized criterion: {}'.format(
-            criterion_opt['type']))
+        raise ValueError(f'Unrecognized criterion: {criterion_opt["type"]}')
 
     return criterion
 
@@ -48,20 +47,17 @@ def define_lr_schedule(schedule_opt, optimizer):
         schedule = optim.lr_scheduler.MultiStepLR(
             optimizer,
             milestones=schedule_opt['milestones'],
-            gamma=schedule_opt['gamma']
-        )
+            gamma=schedule_opt['gamma'])
 
-    elif schedule_opt['type'] == 'CosineAnnealingLR_Restart':
-        from .lr_schedules import CosineAnnealingLR_Restart
-        schedule = CosineAnnealingLR_Restart(
-            optimizer, schedule_opt['periods'],
-            eta_min=schedule_opt['eta_min'],
-            restarts=schedule_opt['restarts'],
-            weights=schedule_opt['restart_weights']
-        )
+    elif schedule_opt['type'] == 'CosineAnnealingRestartLR':
+        from .lr_schedules import CosineAnnealingRestartLR
+        schedule = CosineAnnealingRestartLR(
+            optimizer,
+            periods=schedule_opt['periods'],
+            restart_weights=schedule_opt['restart_weights'],
+            eta_min=schedule_opt['eta_min'])
 
     else:
-        raise ValueError('Unrecognized lr schedule: {}'.format(
-            schedule_opt['type']))
+        raise ValueError(f'Unrecognized lr schedule: {schedule_opt["type"]}')
 
     return schedule

@@ -148,7 +148,7 @@ bash ./train.sh BD TecoGAN
 ```bash
  python ./scripts/monitor_training.py --degradation BD --model TecoGAN --dataset Vid4
 ```
-> Note that the validation results are NOT the same as the test results mentioned above, because we use a different implementation of the metrics. The differences are caused by croping policy, LPIPS version and some other issues.
+> Note that the validation results are NOT exactly the same as the test results mentioned above, because we use a different implementation of the metrics. The differences are caused by croping policy, LPIPS version and some other issues.
 
 
 
@@ -164,7 +164,7 @@ bash ./train.sh BD TecoGAN
 
 
 ## License & Citation
-If you use this code for your research, please cite the following paper.
+If you use this code for your research, please cite the following paper and our project.
 ```tex
 @article{tecogan2020,
   title={Learning temporal coherence via self-supervision for GAN-based video generation},
@@ -177,10 +177,18 @@ If you use this code for your research, please cite the following paper.
   publisher={ACM New York, NY, USA}
 }
 ```
+```tex
+@misc{tecogan_pytorch,
+  author={Deng, Jianing and Zhuo, Cheng},
+  title={PyTorch Implementation of Temporally Coherent GAN (TecoGAN) for Video Super-Resolution},
+  howpublished="\url{https://github.com/skycrapers/TecoGAN-PyTorch}",
+  year={2020},
+}
+```
 
 
 
 ## Acknowledgements
 This code is built on [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), [BasicSR](https://github.com/xinntao/BasicSR) and [LPIPS](https://github.com/richzhang/PerceptualSimilarity). We thank the authors for sharing their codes.
 
-If you have any questions, feel free to email `jn.deng@foxmail.com`
+If you have any questions, feel free to email me `jn.deng@foxmail.com`

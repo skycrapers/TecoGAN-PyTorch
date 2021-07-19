@@ -9,10 +9,9 @@ import torch
 from .base_dataset import BaseDataset
 
 
-
 class PairedLMDBDataset(BaseDataset):
     def __init__(self, data_opt, **kwargs):
-        """ LMDB dataset with paired data, for BI degradation
+        """ LMDB dataset for paired data (for BI degradation)
         """
         super(PairedLMDBDataset, self).__init__(data_opt, **kwargs)
 
@@ -28,12 +27,11 @@ class PairedLMDBDataset(BaseDataset):
         self.gt_lr_keys = list(zip(gt_keys, lr_keys))
 
         # use partial videos
-        if self.filter_file is not None:
+        if hasattr(self, 'filter_file') and self.filter_file is not None:
             with open(self.filter_file, 'r') as f:
                 sel_seqs = { line.strip() for line in f }
             self.gt_lr_keys = list(filter(
-                lambda x: self.parse_lmdb_key(x[0])[0] in sel_seqs,
-                self.gt_lr_keys))
+                lambda x: self.parse_lmdb_key(x[0])[0] in sel_seqs, self.gt_lr_keys))
 
         # register parameters
         self.gt_env = None

@@ -11,8 +11,7 @@ from utils.base_utils import retrieve_files
 
 class PairedFolderDataset(BaseDataset):
     def __init__(self, data_opt, **kwargs):
-        """ Folder dataset with paired data
-            support both BI & BD degradation
+        """ Folder dataset for paired data. It supports both BI & BD degradation.
         """
         super(PairedFolderDataset, self).__init__(data_opt, **kwargs)
 
@@ -22,10 +21,13 @@ class PairedFolderDataset(BaseDataset):
         self.keys = sorted(list(set(gt_keys) & set(lr_keys)))
 
         # filter keys
-        if self.filter_file:
+        sel_keys = set(self.keys)
+        if hasattr(self, 'filter_file') and self.filter_file is not None:
             with open(self.filter_file, 'r') as f:
-                sel_keys = { line.strip() for line in f }
-                self.keys = sorted(list(sel_keys & set(self.keys)))
+                sel_keys = {line.strip() for line in f}
+        elif hasattr(self, 'filter_list') and self.filter_list is not None:
+            sel_keys = set(self.filter_list)
+        self.keys = sorted(list(sel_keys & set(self.keys)))
 
     def __len__(self):
         return len(self.keys)

@@ -10,7 +10,7 @@ from .base_dataset import BaseDataset
 
 class UnpairedLMDBDataset(BaseDataset):
     def __init__(self, data_opt, **kwargs):
-        """ LMDB dataset with unpaired data, for BD degradation
+        """ LMDB dataset for unpaired data (for BD degradation)
         """
         super(UnpairedLMDBDataset, self).__init__(data_opt, **kwargs)
 

@@ -17,7 +17,7 @@ def create_dataloader(opt, phase, idx):
     if phase == 'train':
         # check dataset
         assert data_opt['name'] in ('VimeoTecoGAN', 'VimeoTecoGAN-sub'), \
-            'Unknown Dataset: {}'.format(data_opt['name'])
+            'Unknown Dataset: {data_opt["name"]}'
 
         if degradation_type == 'BI':
             # create dataset
@@ -46,11 +46,11 @@ def create_dataloader(opt, phase, idx):
 
         # create data loader
         if opt['dist']:
-            batch_size = data_opt['batch_size'] // opt['world_size']
+            batch_size = data_opt['batch_size_per_gpu']
             shuffle = False
             sampler = DistributedSampler(dataset)
         else:
-            batch_size = data_opt['batch_size']
+            batch_size = data_opt['batch_size_per_gpu']
             shuffle = True
             sampler = None
 
@@ -60,7 +60,7 @@ def create_dataloader(opt, phase, idx):
             shuffle=shuffle,
             drop_last=True,
             sampler=sampler,
-            num_workers=data_opt['num_workers'],
+            num_workers=data_opt['num_worker_per_gpu'],
             pin_memory=data_opt['pin_memory'])
 
     # --- create loader for testing --- #
@@ -70,11 +70,10 @@ def create_dataloader(opt, phase, idx):
             dataset=PairedFolderDataset(data_opt),
             batch_size=1,
             shuffle=False,
-            num_workers=data_opt['num_workers'],
+            num_workers=data_opt['num_worker_per_gpu'],
             pin_memory=data_opt['pin_memory'])
 
     else:
-        raise ValueError('Unrecognized phase: {}'.format(phase))
+        raise ValueError(f'Unrecognized phase: {phase}')
 
     return loader
-

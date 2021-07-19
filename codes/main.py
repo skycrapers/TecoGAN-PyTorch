@@ -13,7 +13,7 @@ from utils import dist_utils, base_utils, data_utils
 
 
 def train(opt):
-    # logging
+    # print configurations
     base_utils.log_info(f'{20*"-"} Configurations {20*"-"}')
     base_utils.print_options(opt)
 
@@ -23,7 +23,7 @@ def train(opt):
     # build model
     model = define_model(opt)
 
-    # training configs
+    # set training params
     total_sample, iter_per_epoch = len(train_loader.dataset), len(train_loader)
     total_iter = opt['train']['total_iter']
     total_epoch = int(math.ceil(total_iter / iter_per_epoch))
