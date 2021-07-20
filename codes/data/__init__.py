@@ -9,11 +9,11 @@ from .paired_folder_dataset import PairedFolderDataset
 
 
 def create_dataloader(opt, phase, idx):
-    # setup params
+    # set params
     data_opt = opt['dataset'].get(idx)
     degradation_type = opt['dataset']['degradation']['type']
 
-    # --- create loader for training --- #
+    # === create loader for training === #
     if phase == 'train':
         # check dataset
         assert data_opt['name'] in ('VimeoTecoGAN', 'VimeoTecoGAN-sub'), \
@@ -63,7 +63,7 @@ def create_dataloader(opt, phase, idx):
             num_workers=data_opt['num_worker_per_gpu'],
             pin_memory=data_opt['pin_memory'])
 
-    # --- create loader for testing --- #
+    # === create loader for testing === #
     elif phase == 'test':
         # create data loader
         loader = DataLoader(

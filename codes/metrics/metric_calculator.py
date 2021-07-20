@@ -50,7 +50,7 @@ class MetricCalculator():
                     colorspace=cfg['colorspace'],
                     spatial=cfg['spatial'],
                     use_gpu=(opt['device'] == 'cuda'),
-                    gpu_ids=[0],
+                    gpu_ids=[0 if not self.dist else opt['local_rank']],
                     version=cfg['version'])
 
     def reset(self):

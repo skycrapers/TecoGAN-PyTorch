@@ -12,7 +12,7 @@ from utils.data_utils import float32_to_uint8
 from metrics.model_summary import register, parse_model_info
 
 
-# -------------------- generator modules -------------------- #
+# ====================== generator modules ====================== #
 class FNet(nn.Module):
     """ Optical flow estimation network
     """
@@ -264,8 +264,7 @@ class FRNet(BaseSequenceGenerator):
         # forward
         hr_seq = []
         lr_prev = torch.zeros(1, c, h, w, dtype=torch.float32).to(device)
-        hr_prev = torch.zeros(
-            1, c, s * h, s * w, dtype=torch.float32).to(device)
+        hr_prev = torch.zeros(1, c, s*h, s*w, dtype=torch.float32).to(device)
 
         with torch.no_grad():
             for i in range(tot_frm):
@@ -313,7 +312,7 @@ class FRNet(BaseSequenceGenerator):
         return gflops_dict, params_dict
 
 
-# ------------------ discriminator modules ------------------ #
+# ====================== discriminator modules ====================== #
 class DiscriminatorBlocks(nn.Module):
     def __init__(self):
         super(DiscriminatorBlocks, self).__init__()
@@ -387,7 +386,7 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
             :param args_dict: a dict including data/config required here
         """
 
-        # --- set params --- #
+        # === set params === #
         net_G = args_dict['net_G']
         lr_data = args_dict['lr_data']
         bi_data = args_dict['bi_data']
@@ -403,7 +402,7 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
         c_size = int(s_size * args_dict['crop_border_ratio'])
         n_pad = (s_size - c_size) // 2
 
-        # --- compute forward & backward flow --- #
+        # === compute forward & backward flow === #
         if 'hr_flow_merge' not in args_dict:
             if args_dict['use_pp_crit']:
                 hr_flow_bw = hr_flow[:, 0:t:3, ...]  # e.g., frame1 -> frame0
@@ -435,7 +434,7 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
             # reused data to reduce computations
             hr_flow_merge = args_dict['hr_flow_merge']
 
-        # --- build up inputs for D (3 parts) --- #
+        # === build up inputs for D (3 parts) === #
         # part 1: bicubic upsampled data (conditional inputs)
         cond_data = bi_data[:, :t, ...].reshape(n_clip, 3, c, hr_h, hr_w)
         # note: permutation is not necessarily needed here, it's just to keep
@@ -462,7 +461,7 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
         # combine 3 parts together
         input_data = torch.cat([orig_data, warp_data, cond_data], dim=1)
 
-        # --- classify --- #
+        # === classify === #
         out = self.conv_in(input_data)
         out, feature_list = self.discriminator_block(out)
         out = out.view(out.size(0), -1)
@@ -514,18 +513,18 @@ class SpatialDiscriminator(BaseSequenceDiscriminator):
         return out, feature_list
 
     def forward_sequence(self, data, args_dict):
-        # --- setup params --- #
+        # === set params === #
         n, t, c, hr_h, hr_w = data.size()
         data = data.view(n * t, c, hr_h, hr_w)
 
-        # --- build up inputs for D --- #
+        # === build up inputs for net_D === #
         if self.use_cond:
             bi_data = args_dict['bi_data'].view(n * t, c, hr_h, hr_w)
             input_data = torch.cat([bi_data, data], dim=1)
         else:
             input_data = data
 
-        # --- classify --- #
+        # === classify === #
         pred = self.step(input_data)
 
         # construct output dict (nothing to return)

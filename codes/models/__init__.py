@@ -21,6 +21,6 @@ def define_model(opt):
         model = VSRGANModel(opt)
 
     else:
-        raise ValueError('Unrecognized model: {}'.format(opt['model']['name']))
+        raise ValueError(f'Unrecognized model: {opt["model"]["name"]}')
 
     return model

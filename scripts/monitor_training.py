@@ -183,11 +183,11 @@ if __name__ == '__main__':
         ]
         # select losses
         loss_lst = [
-            'l_pix_G',  # pixel loss
+            'l_pix_G',   # pixel loss
             'l_warp_G',  # warping loss
             'l_feat_G',  # perceptual loss
-            'l_gan_G',  # generator loss
-            'l_gan_D',  # discriminator loss
+            'l_gan_G',   # generator loss
+            'l_gan_D',   # discriminator loss
             'p_real_D',
             'p_fake_D',
         ]
@@ -197,6 +197,7 @@ if __name__ == '__main__':
             'LPIPS',
             'tOF'
         ]
+
     else:
         raise ValueError(f'Unrecoginzed model: {args.model}')
 

@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-# -------------------- utility functions -------------------- #
+# ===----------------- utility functions -------------------- #
 def initialize_weights(net_l, init_type='kaiming', scale=1):
     """ Modify from BasicSR/MMSR
     """

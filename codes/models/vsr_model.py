@@ -59,15 +59,15 @@ class VSRModel(BaseModel):
             self.opt['train']['generator'].get('lr_schedule'), self.optim_G)
 
     def train(self):
-        # --- initialize --- #
+        # === initialize === #
         self.net_G.train()
         self.optim_G.zero_grad()
 
-        # --- forward net_G --- #
+        # === forward net_G === #
         net_G_output_dict = self.net_G(self.lr_data)
         hr_data = net_G_output_dict['hr_data']
 
-        # --- optimize net_G --- #
+        # === optimize net_G === #
         loss_G = 0
         self.log_dict = OrderedDict()
 

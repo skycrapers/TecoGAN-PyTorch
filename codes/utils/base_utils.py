@@ -43,7 +43,7 @@ def parse_configs(args):
     setup_device(opt, args.gpu_ids, args.local_rank)
 
     # setup random seed
-    setup_random_seed(opt.get('manual_seed', 2021) + opt['rank'])  # TODO: use rank-related seed?
+    setup_random_seed(opt.get('manual_seed', 2021) + opt['rank'])
 
     return opt
 
@@ -141,33 +141,31 @@ def retrieve_files(dir, suffix='png|jpg'):
 def setup_paths(opt, mode):
 
     def setup_ckpt_dir():
-        ckpt_dir = opt['train'].get('ckpt_dir')
-        if not ckpt_dir:
-            # use default dir
+        ckpt_dir = opt['train'].get('ckpt_dir', '')
+        if not ckpt_dir:  # default dir
             ckpt_dir = osp.join(opt['exp_dir'], 'train', 'ckpt')
             opt['train']['ckpt_dir'] = ckpt_dir
         os.makedirs(ckpt_dir, exist_ok=True)
 
     def setup_res_dir():
-        res_dir = opt['test'].get('res_dir')
-        if not res_dir:
-            # use default dir
+        res_dir = opt['test'].get('res_dir', '')
+        if not res_dir:  # default dir
             res_dir = osp.join(opt['exp_dir'], 'test', 'results')
             opt['test']['res_dir'] = res_dir
         os.makedirs(res_dir, exist_ok=True)
 
     def setup_json_path():
-        json_dir = opt['test'].get('json_dir')
-        if not json_dir:
-            # use default dir
+        json_dir = opt['test'].get('json_dir', '')
+        if not json_dir:  # default dir
             json_dir = osp.join(opt['exp_dir'], 'test', 'metrics')
             opt['test']['json_dir'] = json_dir
         os.makedirs(json_dir, exist_ok=True)
 
     def setup_model_path():
-        load_path = opt['model']['generator'].get('load_path')
+        load_path = opt['model']['generator'].get('load_path', '')
         if not load_path:
-            raise ValueError('Generator path needs to be specified for testing')
+            raise ValueError(
+                'Pretrained generator model is needed for testing')
 
         # parse models
         ckpt_dir, model_idx = osp.split(load_path)
@@ -178,35 +176,36 @@ def setup_paths(opt, mode):
             end_iter = opt['test']['end_iter']
             freq = opt['test']['test_freq']
             opt['model']['generator']['load_path_lst'] = [
-                osp.join(ckpt_dir, 'G_iter{}.pth'.format(iter))
+                osp.join(ckpt_dir, f'G_iter{iter}.pth')
                 for iter in range(start_iter, end_iter + 1, freq)]
         else:
             # test a single model
             opt['model']['generator']['load_path_lst'] = [
-                osp.join(ckpt_dir, '{}.pth'.format(model_idx))]
+                osp.join(ckpt_dir, f'{model_idx}.pth')]
 
     if mode == 'train':
         setup_ckpt_dir()
 
+        # for validation purpose
         for dataset_idx in opt['dataset'].keys():
-            if not dataset_idx.startswith('test'):
+            if 'test' not in dataset_idx:
                 continue
 
-            if opt['test'].get('save_res'):
+            if opt['test'].get('save_res', False):
                 setup_res_dir()
 
-            if opt['test'].get('save_json'):
+            if opt['test'].get('save_json', False):
                 setup_json_path()
 
     elif mode == 'test':
         setup_model_path()
 
         for dataset_idx in opt['dataset'].keys():
-            if not dataset_idx.startswith('test'):
+            if 'test' not in dataset_idx:
                 continue
 
-            if opt['test'].get('save_res'):
+            if opt['test'].get('save_res', False):
                 setup_res_dir()
 
-            if opt['test'].get('save_json'):
-                setup_json_path(dataset_idx)
+            if opt['test'].get('save_json', False):
+                setup_json_path()

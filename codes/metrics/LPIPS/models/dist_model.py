@@ -58,15 +58,18 @@ class DistModel(BaseModel):
         if(self.model == 'net-lin'): # pretrained net + linear layer
             self.net = networks.PNetLin(pnet_rand=pnet_rand, pnet_tune=pnet_tune, pnet_type=net,
                 use_dropout=True, spatial=spatial, version=version, lpips=True)
-            kw = {}
-            if not use_gpu:
-                kw['map_location'] = 'cpu'
+            #kw = {}
+            #if not use_gpu:
+            #    kw['map_location'] = 'cpu'
             if(model_path is None):
                 import inspect
                 model_path = os.path.abspath(os.path.join(inspect.getfile(self.initialize), '..', 'weights/v%s/%s.pth'%(version,net)))
 
             if(not is_train):
-                self.net.load_state_dict(torch.load(model_path, **kw), strict=False)
+                # self.net.load_state_dict(torch.load(model_path, **kw), strict=False)
+                state_dict = torch.load(
+                    model_path, map_location=lambda storage, loc: storage)
+                self.net.load_state_dict(state_dict, strict=False)
 
         elif(self.model=='net'): # pretrained network
             self.net = networks.PNetLin(pnet_rand=pnet_rand, pnet_type=net, lpips=False)
@@ -93,7 +96,7 @@ class DistModel(BaseModel):
 
         if(use_gpu):
             self.net.to(gpu_ids[0])
-            self.net = torch.nn.DataParallel(self.net, device_ids=gpu_ids)
+            #self.net = torch.nn.DataParallel(self.net, device_ids=gpu_ids)
             if(self.is_train):
                 self.rankLoss = self.rankLoss.to(device=gpu_ids[0]) # just put this on GPU0
 

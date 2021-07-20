@@ -102,7 +102,7 @@ class VSRGANModel(VSRModel):
             self.opt['train']['discriminator'].get('lr_schedule'), self.optim_D)
 
     def train(self):
-        # --- prepare data --- #
+        # === prepare data === #
         lr_data, gt_data = self.lr_data, self.gt_data
 
         n, t, c, lr_h, lr_w = lr_data.size()
@@ -114,8 +114,8 @@ class VSRGANModel(VSRModel):
             lr_data.view(n * t, c, lr_h, lr_w)).view(n, t, c, gt_h, gt_w)
 
         # augment data for pingpong criterion
+        # i.e., (0,1,2,...,t-2,t-1) -> (0,1,2,...,t-2,t-1,t-2,...,2,1,0)
         if self.pp_crit is not None:
-            # i.e., (0,1,2,...,t-2,t-1) -> (0,1,2,...,t-2,t-1,t-2,...,2,1,0)
             lr_rev = lr_data.flip(1)[:, 1:, ...]
             gt_rev = gt_data.flip(1)[:, 1:, ...]
             bi_rev = bi_data.flip(1)[:, 1:, ...]
@@ -124,24 +124,24 @@ class VSRGANModel(VSRModel):
             gt_data = torch.cat([gt_data, gt_rev], dim=1)
             bi_data = torch.cat([bi_data, bi_rev], dim=1)
 
-        # --- initialize --- #
+        # === initialize === #
         self.net_G.train()
         self.net_D.train()
         self.optim_G.zero_grad()
         self.optim_D.zero_grad()
         self.log_dict = OrderedDict()
 
-        # --- forward net_G --- #
+        # === forward net_G === #
         net_G_output_dict = self.net_G(lr_data)
         hr_data = net_G_output_dict['hr_data']
 
-        # --- forward net_D --- #
+        # === forward net_D === #
         for param in self.net_D.parameters():
             param.requires_grad = True
 
         # feed additional data
         net_D_input_dict = {
-            'net_G': self.net_G,
+            'net_G': self.get_bare_model(self.net_G),  # TODO: check
             'lr_data': lr_data,
             'bi_data': bi_data,
             'use_pp_crit': (self.pp_crit is not None),
@@ -153,13 +153,13 @@ class VSRGANModel(VSRModel):
         # forward real sequence (gt)
         real_pred, net_D_oputput_dict = self.net_D(gt_data, net_D_input_dict)
 
-        # reuse internal data (e.g., lr optical flow) to reduce computations
+        # reuse internal data (e.g., optical flow) to reduce computations
         net_D_input_dict.update(net_D_oputput_dict)
 
         # forward fake sequence (hr)
         fake_pred, _ = self.net_D(hr_data.detach(), net_D_input_dict)
 
-        # --- optimize net_D --- #
+        # === optimize net_D === #
         real_pred_D, fake_pred_D = real_pred[0], fake_pred[0]
 
         # select D update policy
@@ -184,12 +184,12 @@ class VSRGANModel(VSRModel):
             upd_D = True
 
         if upd_D:
-            self.cnt_upd_D += 1
+            self.cnt_upd_D += 1.0
             real_loss_D = self.gan_crit(real_pred_D, 1)
             fake_loss_D = self.gan_crit(fake_pred_D, 0)
             loss_D = real_loss_D + fake_loss_D
 
-            # update D
+            # update net_D
             loss_D.backward()
             self.optim_D.step()
         else:
@@ -203,7 +203,7 @@ class VSRGANModel(VSRModel):
             self.log_dict['distance'] = distance
             self.log_dict['n_upd_D'] = self.cnt_upd_D
 
-        # --- optimize net_G --- #
+        # === optimize net_G === #
         for param in self.net_D.parameters():
             param.requires_grad = False
 
@@ -286,7 +286,7 @@ class VSRGANModel(VSRModel):
         self.log_dict['l_gan_G'] = loss_gan_G.item()
         self.log_dict['p_fake_G'] = fake_pred_G.mean().item()
 
-        # update G
+        # update net_G
         loss_G.backward()
         self.optim_G.step()
 

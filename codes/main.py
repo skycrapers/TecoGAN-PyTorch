@@ -235,10 +235,10 @@ def profile(opt, lr_size, test_speed=False):
 
 
 if __name__ == '__main__':
-    # --- parse arguments --- #
+    # === parse arguments === #
     args = base_utils.parse_agrs()
 
-    # --- generic settings --- #
+    # === generic settings === #
     # parse configs, set device, set ramdom seed
     opt = base_utils.parse_configs(args)
     # set logger
@@ -246,15 +246,15 @@ if __name__ == '__main__':
     # set dirs
     base_utils.setup_paths(opt, args.mode)
 
-    # --- train --- #
+    # === train === #
     if args.mode == 'train':
         train(opt)
 
-    # --- test --- #
+    # === test === #
     elif args.mode == 'test':
         test(opt)
 
-    # --- profile --- #
+    # === profile === #
     elif args.mode == 'profile':
         profile(opt, args.lr_size, args.test_speed)
 

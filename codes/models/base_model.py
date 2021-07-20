@@ -47,7 +47,7 @@ class BaseModel():
         """ prepare gt, lr data for training
 
             for BD degradation, generate lr data and remove border of gt data
-            for BI degradation, return data directly
+            for BI degradation, use the input data directly
 
         """
 
@@ -100,7 +100,7 @@ class BaseModel():
         if self.dist:
             net = nn.SyncBatchNorm.convert_sync_batchnorm(net)
             net = DistributedDataParallel(
-                net, device_ids=[torch.cuda.current_device()], broadcast_buffers=False)
+                net, device_ids=[torch.cuda.current_device()])
         return net
 
     def update_learning_rate(self):
@@ -170,6 +170,12 @@ class BaseModel():
     def save(self, current_iter):
         pass
 
+    @staticmethod
+    def get_bare_model(net):
+        if isinstance(net, DistributedDataParallel):
+            net = net.module
+        return net
+
     @master_only
     def save_network(self, net, net_label, current_iter):
         filename = f'{net_label}_iter{current_iter}.pth'
@@ -181,14 +187,9 @@ class BaseModel():
         # TODO
         pass
 
-    @staticmethod
-    def get_bare_model(net):
-        if isinstance(net, DistributedDataParallel):
-            net = net.module
-        return net
-
     def load_network(self, net, load_path):
-        state_dict = torch.load(load_path, map_location=lambda storage, loc: storage)
+        state_dict = torch.load(
+            load_path, map_location=lambda storage, loc: storage)
         net = self.get_bare_model(net)
         net.load_state_dict(state_dict)
 
