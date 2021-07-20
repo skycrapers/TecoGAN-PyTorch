@@ -9,7 +9,6 @@ from .networks import define_generator, define_discriminator
 from .networks.vgg_nets import VGGFeatureExtractor
 from .optim import define_criterion, define_lr_schedule
 from utils import base_utils, net_utils, dist_utils
-from utils.base_utils import log_info
 
 
 class VSRGANModel(VSRModel):
@@ -30,8 +29,8 @@ class VSRGANModel(VSRModel):
             self.opt['model']['generator']['name'], self.net_G.__str__()))
 
         # load generator
-        load_path_G = self.opt['model']['generator'].get('load_path')
-        if load_path_G is not None:
+        load_path_G = self.opt['model']['generator'].get('load_path', '')
+        if load_path_G:
             self.load_network(self.net_G, load_path_G)
             base_utils.log_info('Load generator from: {}'.format(load_path_G))
 
@@ -43,19 +42,17 @@ class VSRGANModel(VSRModel):
                 self.opt['model']['discriminator']['name'], self.net_D.__str__()))
 
             # load discriminator
-            load_path_D = self.opt['model']['discriminator'].get('load_path')
-            if load_path_D is not None:
+            load_path_D = self.opt['model']['discriminator'].get('load_path', '')
+            if load_path_D:
                 self.load_network(self.net_D, load_path_D)
                 base_utils.log_info('Load discriminator from: {}'.format(load_path_D))
 
     def set_criterions(self):
         # pixel criterion
-        self.pix_crit = define_criterion(
-            self.opt['train'].get('pixel_crit'))
+        self.pix_crit = define_criterion(self.opt['train'].get('pixel_crit'))
 
         # warping criterion
-        self.warp_crit = define_criterion(
-            self.opt['train'].get('warping_crit'))
+        self.warp_crit = define_criterion(self.opt['train'].get('warping_crit'))
 
         # feature criterion
         self.feat_crit = define_criterion(
@@ -66,16 +63,13 @@ class VSRGANModel(VSRModel):
             self.net_F = VGGFeatureExtractor(feature_layers).to(self.device)
 
         # ping-pong criterion
-        self.pp_crit = define_criterion(
-            self.opt['train'].get('pingpong_crit'))
+        self.pp_crit = define_criterion(self.opt['train'].get('pingpong_crit'))
 
         # feature matching criterion
-        self.fm_crit = define_criterion(
-            self.opt['train'].get('feature_matching_crit'))
+        self.fm_crit = define_criterion(self.opt['train'].get('feature_matching_crit'))
 
         # gan criterion
-        self.gan_crit = define_criterion(
-            self.opt['train'].get('gan_crit'))
+        self.gan_crit = define_criterion(self.opt['train'].get('gan_crit'))
 
     def set_optimizers(self):
         # set optimizer for net_G
@@ -153,7 +147,7 @@ class VSRGANModel(VSRModel):
         # forward real sequence (gt)
         real_pred, net_D_oputput_dict = self.net_D(gt_data, net_D_input_dict)
 
-        # reuse internal data (e.g., optical flow) to reduce computations
+        # reuse internal data (e.g., optical flow)
         net_D_input_dict.update(net_D_oputput_dict)
 
         # forward fake sequence (hr)
@@ -185,8 +179,8 @@ class VSRGANModel(VSRModel):
 
         if upd_D:
             self.cnt_upd_D += 1.0
-            real_loss_D = self.gan_crit(real_pred_D, 1)
-            fake_loss_D = self.gan_crit(fake_pred_D, 0)
+            real_loss_D = self.gan_crit(real_pred_D, True)
+            fake_loss_D = self.gan_crit(fake_pred_D, False)
             loss_D = real_loss_D + fake_loss_D
 
             # update net_D
@@ -229,13 +223,14 @@ class VSRGANModel(VSRModel):
             loss_G += loss_warp_G
             self.log_dict['l_warp_G'] = loss_warp_G.item()
 
-        # feature (feat) loss
+        # feature/perceptual (feat) loss
         if self.feat_crit is not None:
             hr_merge = hr_data.view(-1, c, gt_h, gt_w)
             gt_merge = gt_data.view(-1, c, gt_h, gt_w)
 
             hr_feat_lst = self.net_F(hr_merge)
             gt_feat_lst = self.net_F(gt_merge)
+
             loss_feat_G = 0
             for hr_feat, gt_feat in zip(hr_feat_lst, gt_feat_lst):
                 loss_feat_G += self.feat_crit(hr_feat, gt_feat.detach())

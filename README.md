@@ -146,7 +146,7 @@ bash ./train.sh BD TecoGAN
 
 6. To monitor the training process and visualize the validation performance, run the following script.
 ```bash
- python ./scripts/monitor_training.py --degradation BD --model TecoGAN --dataset Vid4
+python ./scripts/monitor_training.py --m TecoGAN -d Vid4
 ```
 > Note that the validation results are NOT exactly the same as the test results mentioned above, because we use a different implementation of the metrics. The differences are caused by croping policy, LPIPS version and some other issues.
 

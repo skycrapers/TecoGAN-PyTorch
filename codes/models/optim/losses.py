@@ -9,9 +9,6 @@ class VanillaGANLoss(nn.Module):
         self.crit = nn.BCEWithLogitsLoss(reduction=reduction)
 
     def forward(self, input, status):
-        """
-            :param status: boolean, True/False
-        """
         target = torch.empty_like(input).fill_(int(status))
         loss = self.crit(input, target)
         return loss
