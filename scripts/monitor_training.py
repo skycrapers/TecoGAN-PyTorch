@@ -118,14 +118,14 @@ def monitor(root_dir, testset, exp_id_lst, loss_lst, metric_lst):
     for exp_id in exp_id_lst:
         # parse log
         log_file = osp.join(root_dir, exp_id, 'train', 'train.log')
-        model_loss_dict = parse_log(log_file)
-        loss_dict[exp_id] = model_loss_dict
+        if osp.exists(log_file):
+            loss_dict[exp_id] = parse_log(log_file)
 
         # parse json
         json_file = osp.join(
             root_dir, exp_id, 'test', 'metrics', f'{testset}_avg.json')
-        model_metric_dict = parse_json(json_file)
-        metric_dict[exp_id] = model_metric_dict
+        if osp.exists(json_file):
+            metric_dict[exp_id] = parse_json(json_file)
 
     # ================ plot loss curves ================#
     n_loss = len(loss_lst)
@@ -180,6 +180,7 @@ if __name__ == '__main__':
         exp_id_lst = [
             # experiment dir
             'experiments_BD/TecoGAN/001_2gpus',
+            'experiments_BD/TecoGAN/001_4gpus',
         ]
         # select losses
         loss_lst = [
