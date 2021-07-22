@@ -14,14 +14,18 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 </p>
 
 
+
 ### Updates
-- Support Multi-GPU training & testing.
+- Upgraded codebase, now support Multi-GPUs training & testing.
+
 
 
 ### Features
-- **Better Performance**: This repo provides model with smaller size yet better performance than the official repo. See our [Benchmark](https://github.com/skycrapers/TecoGAN-PyTorch#benchmark) on Vid4 and ToS3 datasets.
+- **Better Performance**: This repo provides model with smaller size yet better performance than the official repo. See our [Benchmark](https://github.com/skycrapers/TecoGAN-PyTorch#benchmark).
 - **Multiple Degradations**: This repo supports two types of degradation, i.e., BI & BD. Please refer to [this wiki]() for more details about degradation types.
 - **Unified Framework**: This repo provides a unified framework for distortion-based and perception-based VSR methods.
+
+
 
 ### Contents
 1. [Dependencies](#dependencies)
