@@ -14,6 +14,10 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 </p>
 
 
+### Updates
+- Support Multi-GPU training & testing.
+
+
 ### Features
 - **Better Performance**: This repo provides model with smaller size yet better performance than the official repo. See our [Benchmark](https://github.com/skycrapers/TecoGAN-PyTorch#benchmark) on Vid4 and ToS3 datasets.
 - **Multiple Degradations**: This repo supports two types of degradation, i.e., BI & BD. Please refer to [this wiki]() for more details about degradation types.
@@ -21,7 +25,7 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 
 ### Contents
 1. [Dependencies](#dependencies)
-1. [Test](#test)
+1. [Testing](#testing)
 1. [Training](#training)
 1. [Benchmark](#benchmark)
 1. [License & Citation](#license--citation)
@@ -39,15 +43,15 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 
 
 
-## Test
+## Testing
 
-**Note:** We apply different models according to the degradation type of the data. The following steps are for 4x upsampling in BD degradation. You can switch to BI degradation by replacing all `BD` to `BI` below.
+**Note:** We apply different models according to the degradation type. The following steps are for 4x upsampling for BD degradation. You can switch to BI degradation by replacing all `BD` to `BI` below.
 
 1. Download the official Vid4 and ToS3 datasets.
 ```bash
 bash ./scripts/download/download_datasets.sh BD 
 ```
-> If the above command doesn't work, you can manually download these datasets from Google Drive, and then unzip them under `./data`.
+> You can manually download these datasets from Google Drive, and unzip them under `./data`.
 > * Vid4 Dataset [[Ground-Truth Data](https://drive.google.com/file/d/1T8TuyyOxEUfXzCanH5kvNH2iA8nI06Wj/view?usp=sharing)] [[Low Resolution Data (BD)](https://drive.google.com/file/d/1-5NFW6fEPUczmRqKHtBVyhn2Wge6j3ma/view?usp=sharing)] [[Low Resolution Data (BI)](https://drive.google.com/file/d/1Kg0VBgk1r9I1c4f5ZVZ4sbfqtVRYub91/view?usp=sharing)]
 > * ToS3 Dataset [[Ground-Truth Data](https://drive.google.com/file/d/1XoR_NVBR-LbZOA8fXh7d4oPV0M8fRi8a/view?usp=sharing)] [[Low Resolution Data (BD)](https://drive.google.com/file/d/1rDCe61kR-OykLyCo2Ornd2YgPnul2ffM/view?usp=sharing)] [[Low Resolution Data (BI)](https://drive.google.com/file/d/1FNuC0jajEjH9ycqDkH4cZQ3_eUqjxzzf/view?usp=sharing)] 
 
@@ -73,36 +77,36 @@ data
     └─ Bicubic4xLR
 ```
 
-2. Download our pre-trained TecoGAN model. Note that this model is trained with lesser training data compared with the official one, since we can only retrieve 212 out of 308 videos from the official training dataset.
+2. Download our pre-trained TecoGAN model.
 ```bash
 bash ./scripts/download/download_models.sh BD TecoGAN
 ```
-> Again, you can download the model from [[BD degradation](https://drive.google.com/file/d/13FPxKE6q7tuRrfhTE7GB040jBeURBj58/view?usp=sharing)] or [[BI degradation](https://drive.google.com/file/d/1ie1F7wJcO4mhNWK8nPX7F0LgOoPzCwEu/view?usp=sharing)], and put it under `./pretrained_models`.
+> You can download the model from [[BD degradation](https://drive.google.com/file/d/13FPxKE6q7tuRrfhTE7GB040jBeURBj58/view?usp=sharing)] or [[BI degradation](https://drive.google.com/file/d/1ie1F7wJcO4mhNWK8nPX7F0LgOoPzCwEu/view?usp=sharing)], and put it under `./pretrained_models`.
 
-3. Super-resolute the LR videos with TecoGAN. The results will be saved at `./results`.
+3. Upsample the LR videos by TecoGAN. The results will be saved at `./results`. You can specify which model and how many gpus to use in `test.sh`.
 ```bash
 bash ./test.sh BD TecoGAN
 ```
 
-4. Evaluate SR results using the official metrics. These codes are borrowed from [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), with minor modifications to adapt to BI mode.
+4. Evaluate the upsampled results using the official metrics. These codes are borrowed from [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), with minor modifications to adapt to the BI degradation.
 ```bash
-python ./codes/official_metrics/evaluate.py --model TecoGAN_BD_iter500000
+python ./codes/official_metrics/evaluate.py -m TecoGAN_BD_iter500000
 ```
 
-5. Check out model statistics (FLOPs, parameters and running speed). You can modify the last argument to specify the video size.
+5. Profile model (FLOPs, parameters and speed). You can modify the last argument to specify the size of the LR video.
 ```bash
 bash ./profile.sh BD TecoGAN 3x134x320
 ```
 
 ## Training
-1. Download the official training dataset based on the instructions in [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), rename to `VimeoTecoGAN` and then place under `./data`.
+1. Download the official training dataset according to the instructions in [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), rename to `VimeoTecoGAN`, and place under `./data`.
 
 2. Generate LMDB for GT data to accelerate IO. The LR counterpart will then be generated on the fly during training.
 ```bash
 python ./scripts/create_lmdb.py --dataset VimeoTecoGAN --data_type GT
 ```
 
-The following shows the dataset structure after completing the above two steps.
+The following shows the dataset structure after finishing the above two steps.
 ```tex
 data
   ├─ VimeoTecoGAN          # Original (raw) dataset
@@ -121,7 +125,7 @@ data
     └─ meta_info.pkl       # each key has format: [vid]_[total_frame]x[h]x[w]_[i-th_frame]
 ```
 
-3. **(Optional, this step is needed only for BI degradation)** Manually generate the LR sequences with Matlab's imresize function, and then create LMDB for them.
+3. **(Optional, this step is only required for BI degradation)** Manually generate the LR sequences with Matlab's imresize function, and then create LMDB for them.
 ```bash
 # Generate the raw LR video sequences. Results will be saved at ./data/Bicubic4xLR
 matlab -nodesktop -nosplash -r "cd ./scripts; generate_lr_BI"
@@ -130,7 +134,7 @@ matlab -nodesktop -nosplash -r "cd ./scripts; generate_lr_BI"
 python ./scripts/create_lmdb.py --dataset VimeoTecoGAN --data_type Bicubic4xLR
 ```
 
-4. Train a FRVSR model first. FRVSR has the same generator as TecoGAN, but without GAN training. When the training is finished, copy and rename the last checkpoint weight from `./experiments_BD/FRVSR/001/train/ckpt/G_iter400000.pth` to `./pretrained_models/FRVSR_BD_iter400000.pth`. This step offers a better initialization for the TecoGAN training.
+4. Train a FRVSR model first. FRVSR has the same generator as TecoGAN, but without perceptual training (i.e., GAN and perceptual losses). When the training is complete, copy and rename the last checkpoint weight from `./experiments_BD/FRVSR/001/train/ckpt/G_iter400000.pth` to `./pretrained_models/FRVSR_BD_iter400000.pth`. A pre-trained FRVSR model offers a better initialization for the following TecoGAN training.
 ```bash
 bash ./train.sh BD FRVSR
 ```
@@ -139,7 +143,7 @@ bash ./train.sh BD FRVSR
 >bash ./scripts/download/download_models.sh BD FRVSR
 >```
 
-5. Train a TecoGAN model. By default, the training is conducted in the background and the output info will be logged at `./experiments_BD/TecoGAN/001/train/train.log`.
+5. Train a TecoGAN model. You can specify which gpus to use in `train.sh`. By default, the training is conducted in the background and the output info will be logged in `./experiments_BD/TecoGAN/001/train/train.log`.
 ```bash
 bash ./train.sh BD TecoGAN
 ```
@@ -148,7 +152,7 @@ bash ./train.sh BD TecoGAN
 ```bash
 python ./scripts/monitor_training.py --m TecoGAN -d Vid4
 ```
-> Note that the validation results are NOT exactly the same as the test results mentioned above, because we use a different implementation of the metrics. The differences are caused by croping policy, LPIPS version and some other issues.
+> Note that the validation results are NOT exactly the same as the testing results mentioned above due to different implementation of the metrics. The differences are caused by croping policy, LPIPS version and some other issues.
 
 
 
@@ -158,7 +162,7 @@ python ./scripts/monitor_training.py --m TecoGAN -d Vid4
     <img src="resources/benchmark.png" width="640" />
 </p>
 
-> <sup>[1]</sup> FLOPs & speed are computed on RGB sequence with resolution 134\*320 on NVIDIA GeForce GTX 1080Ti GPU. \
+> <sup>[1]</sup> FLOPs & speed are computed on RGB sequence with resolution 134\*320 on a single NVIDIA 1080Ti GPU. \
 > <sup>[2]</sup> Both FRVSR & TecoGAN use 10 residual blocks, while TecoGAN+ has 16 residual blocks.
 
 
