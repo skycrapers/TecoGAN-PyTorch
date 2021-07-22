@@ -163,7 +163,7 @@ if __name__ == '__main__':
         # select experiments
         exp_id_lst = [
             # experiment dir
-            'experiments_BD/FRVSR/001_4gpus',
+            'experiments_BD/FRVSR/001',
         ]
         # select losses
         loss_lst = [
@@ -179,8 +179,7 @@ if __name__ == '__main__':
         # select experiments
         exp_id_lst = [
             # experiment dir
-            'experiments_BD/TecoGAN/001_2gpus',
-            'experiments_BD/TecoGAN/001_4gpus',
+            'experiments_BD/TecoGAN/001',
         ]
         # select losses
         loss_lst = [
