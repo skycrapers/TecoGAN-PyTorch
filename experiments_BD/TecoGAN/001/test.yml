@@ -14,22 +14,20 @@ dataset:
     name: Vid4
     gt_seq_dir: data/Vid4/GT
     lr_seq_dir: data/Vid4/Gaussian4xLR
-    filter_file: ~
-    num_workers: 4
+    num_worker_per_gpu: 3
     pin_memory: true
 
   test2:
     name: ToS3
     gt_seq_dir: data/ToS3/GT
     lr_seq_dir: data/ToS3/Gaussian4xLR
-    filter_file: ~
-    num_workers: 4
+    num_worker_per_gpu: 3
     pin_memory: true
 
 
 # model configs
 model:
-  name: FRVSR
+  name: TecoGAN
 
   generator:
     name: FRNet  # frame-recurrent network

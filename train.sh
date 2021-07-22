@@ -6,7 +6,7 @@
 root_dir=.
 degradation=$1
 model=$2
-exp_id=001_dist
+exp_id=001
 gpu_ids=0,1  # set to -1 to use cpu
 master_port=4321
 

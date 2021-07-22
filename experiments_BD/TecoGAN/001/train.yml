@@ -16,8 +16,8 @@ dataset:
     filter_file: ~
     data_type: rgb
     crop_size: 128
-    batch_size: 4
-    num_workers: 6
+    batch_size_per_gpu: 2
+    num_worker_per_gpu: 3
     pin_memory: true
 
   test:
@@ -25,7 +25,7 @@ dataset:
     gt_seq_dir: data/Vid4/GT
     lr_seq_dir: data/Vid4/Gaussian4xLR
     filter_file: ~
-    num_workers: 4
+    num_worker_per_gpu: 3
     pin_memory: true
 
 
@@ -60,8 +60,7 @@ train:
     lr: !!float 5e-5
     lr_schedule:
       type: FixedLR
-    beta1: 0.9
-    beta2: 0.999
+    betas: [0.9, 0.999]
 
   # configs for discriminator
   discriminator:
@@ -71,8 +70,7 @@ train:
     lr: !!float 5e-5
     lr_schedule:
       type: FixedLR
-    beta1: 0.9
-    beta2: 0.999
+    betas: [0.9, 0.999]
 
   # other configs
   moving_first_frame: true
@@ -126,7 +124,6 @@ test:
 metric:
   PSNR:
     colorspace: y
-    mult: 1.0
 
   LPIPS:
     model: net-lin
@@ -134,10 +131,9 @@ metric:
     colorspace: rgb
     spatial: false
     version: 0.1
-    mult: 1.0
 
   tOF:
-    mult: 1.0
+    colorspace: y
 
 
 # logger configs
