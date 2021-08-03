@@ -1,16 +1,22 @@
-import os
-import os.path as osp
 import argparse
 import glob
-import lmdb
+import os
+import os.path as osp
 import pickle
 import random
 
 import cv2
+import lmdb
 import numpy as np
 
 
-def create_lmdb(dataset, raw_dir, lmdb_dir, filter_file=''):
+def get_FileSize(filePath):
+
+    fsize = os.path.getsize(filePath)
+    return round(fsize, 3)
+
+
+def create_lmdb(dataset, raw_dir, lmdb_dir, zip_img=False, filter_file=''):
     assert dataset in ('VimeoTecoGAN', 'VimeoTecoGAN-sub'), f'Unknown Dataset: {dataset}'
     print(f'Creating lmdb for dataset: {dataset}')
 
@@ -27,7 +33,11 @@ def create_lmdb(dataset, raw_dir, lmdb_dir, filter_file=''):
     nbytes = 0
     for seq_dir in seq_dir_lst:
         frm_path_lst = sorted(glob.glob(osp.join(raw_dir, seq_dir, '*.png')))
-        nbytes_per_frm = cv2.imread(frm_path_lst[0], cv2.IMREAD_UNCHANGED).nbytes
+        if not zip_img:
+            nbytes_per_frm = cv2.imread(frm_path_lst[0], cv2.IMREAD_UNCHANGED).nbytes
+        else:
+            nbytes_per_frm = get_FileSize(frm_path_lst[0])
+
         nbytes += len(frm_path_lst)*nbytes_per_frm
     alloc_size = round(1.5*nbytes)
     print(f'{alloc_size / (1 << 30):.2f} GB')
@@ -54,7 +64,10 @@ def create_lmdb(dataset, raw_dir, lmdb_dir, filter_file=''):
 
             h, w, c = frm.shape
             key = f'{seq_dir}_{n_frm}x{h}x{w}_{i:04d}'
-            txn.put(key.encode('ascii'), frm)
+            if not zip_img:
+                txn.put(key.encode('ascii'), frm)
+            else:
+                txn.put(key.encode('ascii'), cv2.imencode('.jpg', frm)[1])
             keys.append(key)
 
         # commit
@@ -73,13 +86,15 @@ def create_lmdb(dataset, raw_dir, lmdb_dir, filter_file=''):
     pickle.dump(meta_info, open(osp.join(lmdb_dir, 'meta_info.pkl'), 'wb'))
 
 
-def check_lmdb(dataset, lmdb_dir, display=True):
+def check_lmdb(dataset, lmdb_dir, zip_img=False, display=True):
 
     def visualize(win, img):
         if display:
             cv2.namedWindow(win, 0)
             cv2.resizeWindow(win, img.shape[-2], img.shape[-3])
-            cv2.imshow(win, img[..., ::-1])
+            size = img.shape
+            dst = cv2.resize(img, (size[1], size[0]), fx=0.5, fy=0.5)
+            cv2.imshow(win, dst[..., ::-1])
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         else:
@@ -108,7 +123,11 @@ def check_lmdb(dataset, lmdb_dir, display=True):
 
             with env.begin() as txn:
                 buf = txn.get(key.encode('ascii'))
-                val = np.frombuffer(buf, dtype=np.uint8).reshape(*sz) # HWC
+                if not zip_img:
+                    val = np.frombuffer(buf, dtype=np.uint8).reshape(*sz)  # HWC
+                else:
+                    val = np.frombuffer(buf, dtype=np.uint8)
+                    val = cv2.imdecode(val, cv2.IMREAD_COLOR)
 
             visualize(key, val)
 
@@ -131,10 +150,9 @@ if __name__ == '__main__':
     if osp.exists(lmdb_dir):
         print(f'Dataset [{args.dataset}] already exists')
         print('Checking the LMDB dataset ...')
-        check_lmdb(args.dataset, lmdb_dir)
+        check_lmdb(args.dataset, lmdb_dir, zip_img=True, display=False)
     else:
-        create_lmdb(args.dataset, raw_dir, lmdb_dir, filter_file)
+        create_lmdb(args.dataset, raw_dir, lmdb_dir, zip_img=True)
 
         print('Checking the LMDB dataset ...')
-        check_lmdb(args.dataset, lmdb_dir)
-
+        check_lmdb(args.dataset, lmdb_dir, zip_img=True, display=False)

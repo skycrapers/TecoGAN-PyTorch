@@ -1,0 +1,12 @@
+# python
+__pycache__
+
+# IDE
+.vscode
+.history
+experiments_*
+data/
+
+# project
+*.pth
+results

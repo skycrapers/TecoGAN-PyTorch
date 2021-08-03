@@ -1,5 +1,5 @@
+import cv2
 import lmdb
-
 import numpy as np
 from torch.utils.data import Dataset
 
@@ -62,7 +62,8 @@ class BaseDataset(Dataset):
     def read_lmdb_frame(env, key, size):
         with env.begin(write=False) as txn:
             buf = txn.get(key.encode('ascii'))
-        frm = np.frombuffer(buf, dtype=np.uint8).reshape(*size)
+        frm = np.frombuffer(buf, dtype=np.uint8)
+        frm = cv2.imdecode(frm, cv2.IMREAD_COLOR)
         return frm
 
     def crop_sequence(self, **kwargs):
