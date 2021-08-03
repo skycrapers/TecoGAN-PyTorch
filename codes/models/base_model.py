@@ -154,9 +154,9 @@ class BaseModel():
     def get_running_log(self):
         return self.running_log_dict
 
-    def get_format_msg(self, epoch, iter):
+    def get_format_msg(self, epoch, iter, total_epoch, total_iter):
         # generic info
-        msg = f'[epoch: {epoch} | iter: {iter}'
+        msg = f'[epoch: {epoch:3d}/{total_epoch} | iter: {iter:6d}/{total_iter}'
         for lr_type, lr in self.get_current_learning_rate().items():
             msg += f' | {lr_type}: {lr:.2e}'
         msg += '] '
