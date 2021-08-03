@@ -1,6 +1,7 @@
 import math
 import os.path as osp
 import time
+from datetime import datetime
 
 import torch
 
@@ -35,6 +36,7 @@ def train(opt):
     base_utils.log_info(f'Total epochs needed: {total_epoch} for {total_iter} iterations')
 
     # train
+    start_time = time.time()
     for epoch in range(total_epoch):
         if opt['dist']:
             train_loader.sampler.set_epoch(epoch)
@@ -61,8 +63,12 @@ def train(opt):
 
             # print messages
             if log_freq > 0 and curr_iter % log_freq == 0:
+                ckpt_time = time.time() - start_time
+                eta = int(ckpt_time * (total_iter - curr_iter) / curr_iter)
+                eta = datetime.fromtimestamp(eta) - datetime.fromtimestamp(0)
+
                 msg = model.get_format_msg(epoch, curr_iter, total_epoch, total_iter)
-                base_utils.log_info(msg)
+                base_utils.log_info(f"{msg} | eta: {str(eta)}")
 
             # save model
             if ckpt_freq > 0 and curr_iter % ckpt_freq == 0:
