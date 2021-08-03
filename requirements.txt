@@ -1,0 +1,6 @@
+numpy
+matplotlib 
+opencv-python
+pyyaml
+lmdb
+scikit-image>=0.16.0
