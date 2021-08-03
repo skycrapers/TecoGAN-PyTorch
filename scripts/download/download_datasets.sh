@@ -44,7 +44,9 @@ if [ ! -d "./data/Vid4/GT" ]; then
     echo ">>> Start to download [Vid4 GT] dataset"
     
 	mkdir -p ${DATA_DIR}
-	download_large_file ${DATA_DIR} ${FID} GT
+	if [ ! -e "${DATA_DIR}/GT.zip" ]; then
+		download_large_file ${DATA_DIR} ${FID} GT
+	fi
 	check_md5 ${DATA_DIR}/GT.zip ${MD5}
 	unzip ${DATA_DIR}/GT.zip -d ${DATA_DIR} && rm ${DATA_DIR}/GT.zip
 fi
@@ -60,7 +62,9 @@ if [ ! -d "./data/ToS3/GT" ]; then
     echo ">>> Start to download [ToS3 GT] dataset"
     
 	mkdir -p ${DATA_DIR}
-	download_large_file ${DATA_DIR} ${FID} GT
+	if [ ! -e "${DATA_DIR}/GT.zip" ]; then
+		download_large_file ${DATA_DIR} ${FID} GT
+	fi
 	check_md5 ${DATA_DIR}/GT.zip ${MD5}
 	unzip ${DATA_DIR}/GT.zip -d ${DATA_DIR} && rm ${DATA_DIR}/GT.zip
 fi
@@ -75,7 +79,10 @@ if [ $1 == BD ]; then
 	    
 	    echo ">>> Start to download [Vid4 LR] dataset (BD degradation)"
 	    
-		download_small_file ${DATA_DIR} ${FID} Gaussian4xLR
+		if [ ! -e "${DATA_DIR}/Gaussian4xLR.zip" ]; then
+			download_small_file ${DATA_DIR} ${FID} Gaussian4xLR
+		fi
+
 		check_md5 ${DATA_DIR}/Gaussian4xLR.zip ${MD5}
 		unzip ${DATA_DIR}/Gaussian4xLR.zip -d ${DATA_DIR} && rm ${DATA_DIR}/Gaussian4xLR.zip
 	fi
@@ -90,7 +97,9 @@ if [ $1 == BD ]; then
 	    
 	    echo ">>> Start to download [ToS3 LR] dataset (BD degradation)"
 	    
-		download_large_file ${DATA_DIR} ${FID} Gaussian4xLR
+		if [ ! -e "${DATA_DIR}/Gaussian4xLR.zip" ]; then
+			download_large_file ${DATA_DIR} ${FID} Gaussian4xLR
+		fi
 		check_md5 ${DATA_DIR}/Gaussian4xLR.zip ${MD5}
 		unzip ${DATA_DIR}/Gaussian4xLR.zip -d ${DATA_DIR} && rm ${DATA_DIR}/Gaussian4xLR.zip
 	fi
@@ -104,7 +113,10 @@ elif [ $1 == BI ]; then
 	    
 	    echo ">>> Start to download [Vid4 LR] dataset (BI degradation)"
 	    
-		download_small_file ${DATA_DIR} ${FID} Bicubic4xLR
+		if [ ! -e "${DATA_DIR}/Bicubic4xLR.zip" ]; then
+			download_small_file ${DATA_DIR} ${FID} Bicubic4xLR
+		fi
+
 		check_md5 ${DATA_DIR}/Bicubic4xLR.zip ${MD5}
 		unzip ${DATA_DIR}/Bicubic4xLR.zip -d ${DATA_DIR} && rm ${DATA_DIR}/Bicubic4xLR.zip
 	fi
@@ -119,7 +131,10 @@ elif [ $1 == BI ]; then
 	    
 	    echo ">>> Start to download [ToS3 LR] dataset (BI degradation)"
 	    
-		download_large_file ${DATA_DIR} ${FID} Bicubic4xLR
+		if [ ! -e "${DATA_DIR}/Bicubic4xLR.zip" ]; then
+			download_large_file ${DATA_DIR} ${FID} Bicubic4xLR
+		fi
+	
 		check_md5 ${DATA_DIR}/Bicubic4xLR.zip ${MD5}
 		unzip ${DATA_DIR}/Bicubic4xLR.zip -d ${DATA_DIR} && rm ${DATA_DIR}/Bicubic4xLR.zip
 	fi
