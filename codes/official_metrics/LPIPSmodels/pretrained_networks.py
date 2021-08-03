@@ -1,7 +1,8 @@
 from collections import namedtuple
+
 import torch
 from torchvision import models
-from IPython import embed
+
 
 class squeezenet(torch.nn.Module):
     def __init__(self, requires_grad=False, pretrained=True):
@@ -17,7 +18,7 @@ class squeezenet(torch.nn.Module):
         self.N_slices = 7
         for x in range(2):
             self.slice1.add_module(str(x), pretrained_features[x])
-        for x in range(2,5):
+        for x in range(2, 5):
             self.slice2.add_module(str(x), pretrained_features[x])
         for x in range(5, 8):
             self.slice3.add_module(str(x), pretrained_features[x])
@@ -48,8 +49,8 @@ class squeezenet(torch.nn.Module):
         h_relu6 = h
         h = self.slice7(h)
         h_relu7 = h
-        vgg_outputs = namedtuple("SqueezeOutputs", ['relu1','relu2','relu3','relu4','relu5','relu6','relu7'])
-        out = vgg_outputs(h_relu1,h_relu2,h_relu3,h_relu4,h_relu5,h_relu6,h_relu7)
+        vgg_outputs = namedtuple("SqueezeOutputs", ['relu1', 'relu2', 'relu3', 'relu4', 'relu5', 'relu6', 'relu7'])
+        out = vgg_outputs(h_relu1, h_relu2, h_relu3, h_relu4, h_relu5, h_relu6, h_relu7)
 
         return out
 
@@ -94,6 +95,7 @@ class alexnet(torch.nn.Module):
 
         return out
 
+
 class vgg16(torch.nn.Module):
     def __init__(self, requires_grad=False, pretrained=True):
         super(vgg16, self).__init__()
@@ -135,19 +137,18 @@ class vgg16(torch.nn.Module):
         return out
 
 
-
 class resnet(torch.nn.Module):
     def __init__(self, requires_grad=False, pretrained=True, num=18):
         super(resnet, self).__init__()
-        if(num==18):
+        if(num == 18):
             self.net = models.resnet18(pretrained=pretrained)
-        elif(num==34):
+        elif(num == 34):
             self.net = models.resnet34(pretrained=pretrained)
-        elif(num==50):
+        elif(num == 50):
             self.net = models.resnet50(pretrained=pretrained)
-        elif(num==101):
+        elif(num == 101):
             self.net = models.resnet101(pretrained=pretrained)
-        elif(num==152):
+        elif(num == 152):
             self.net = models.resnet152(pretrained=pretrained)
         self.N_slices = 5
 
@@ -175,7 +176,7 @@ class resnet(torch.nn.Module):
         h = self.layer4(h)
         h_conv5 = h
 
-        outputs = namedtuple("Outputs", ['relu1','conv2','conv3','conv4','conv5'])
+        outputs = namedtuple("Outputs", ['relu1', 'conv2', 'conv3', 'conv4', 'conv5'])
         out = outputs(h_relu1, h_conv2, h_conv3, h_conv4, h_conv5)
 
         return out

@@ -1,12 +1,11 @@
 from collections import OrderedDict
 
-import torch
 import torch.optim as optim
+from utils import base_utils, data_utils, net_utils
 
 from .base_model import BaseModel
 from .networks import define_generator
 from .optim import define_criterion, define_lr_schedule
-from utils import base_utils, net_utils, data_utils
 
 
 class VSRModel(BaseModel):

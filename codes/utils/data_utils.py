@@ -1,11 +1,10 @@
 import os
 import os.path as osp
 
-from scipy import signal
 import cv2
 import numpy as np
 import torch
-import torch.nn.functional as F
+from scipy import signal
 
 
 def create_kernel(sigma, ksize=None):
@@ -37,9 +36,9 @@ def rgb_to_ycbcr(img):
     """
 
     T = np.array([
-        [0.256788235294118, -0.148223529411765,  0.439215686274510],
+        [0.256788235294118, -0.148223529411765, 0.439215686274510],
         [0.504129411764706, -0.290992156862745, -0.367788235294118],
-        [0.097905882352941,  0.439215686274510, -0.071427450980392],
+        [0.097905882352941, 0.439215686274510, -0.071427450980392],
     ], dtype=np.float64)
 
     O = np.array([16, 128, 128], dtype=np.float64)

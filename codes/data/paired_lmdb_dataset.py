@@ -2,7 +2,6 @@ import os.path as osp
 import pickle
 import random
 
-import cv2
 import numpy as np
 import torch
 
@@ -29,7 +28,7 @@ class PairedLMDBDataset(BaseDataset):
         # use partial videos
         if hasattr(self, 'filter_file') and self.filter_file is not None:
             with open(self.filter_file, 'r') as f:
-                sel_seqs = { line.strip() for line in f }
+                sel_seqs = {line.strip() for line in f}
             self.gt_lr_keys = list(filter(
                 lambda x: self.parse_lmdb_key(x[0])[0] in sel_seqs, self.gt_lr_keys))
 

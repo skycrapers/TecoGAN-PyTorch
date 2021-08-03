@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 
-
 # define which modules to be incorporated
 registered_module = [
     nn.Conv2d,
@@ -22,7 +21,7 @@ def calc_2d_gflops_per_batch(module, out_h, out_w):
         bias = 0 if hasattr(module, 'bias') else -1
         out_c, in_c, k_h, k_w = module.weight.shape
 
-        gflops += (2*in_c*k_h*k_w + bias)*out_c*out_h*out_w/1e9
+        gflops += (2 * in_c * k_h * k_w + bias) * out_c * out_h * out_w / 1e9
     return gflops
 
 
@@ -35,20 +34,20 @@ def calc_3d_gflops_per_batch(module, out_d, out_h, out_w):
         bias = 0 if hasattr(module, 'bias') else -1
         out_c, in_c, k_d, k_h, k_w = module.weight.shape
 
-        gflops += (2*in_c*k_d*k_h*k_w + bias)*out_c*out_d*out_h*out_w/1e9
+        gflops += (2 * in_c * k_d * k_h * k_w + bias) * out_c * out_d * out_h * out_w / 1e9
     return gflops
 
 
 def hook_fn_forward(module, input, output):
     if isinstance(module, nn.Conv3d):
         batch_size, _, out_d, out_h, out_w = output.size()
-        gflops = batch_size*calc_3d_gflops_per_batch(module, out_d, out_h, out_w)
+        gflops = batch_size * calc_3d_gflops_per_batch(module, out_d, out_h, out_w)
     else:
         if isinstance(module, nn.ConvTranspose2d):
             batch_size, _, out_h, out_w = input[0].size()
         else:
             batch_size, _, out_h, out_w = output.size()
-        gflops = batch_size*calc_2d_gflops_per_batch(module, out_h, out_w)
+        gflops = batch_size * calc_2d_gflops_per_batch(module, out_h, out_w)
 
     model_info_lst.append({'gflops': gflops})
 

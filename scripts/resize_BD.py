@@ -1,11 +1,9 @@
+import glob
 import os
 import os.path as osp
-import glob
 from multiprocessing import Pool
 
-import numpy as np
 import cv2
-
 
 # setup params
 # default settings
@@ -52,4 +50,3 @@ if __name__ == '__main__':
         pool.apply_async(downsample_worker, args=(filepath,))
     pool.close()
     pool.join()
-

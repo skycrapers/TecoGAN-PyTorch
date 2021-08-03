@@ -1,9 +1,9 @@
-import os.path as osp
 import argparse
+import bisect
 import json
 import math
+import os.path as osp
 import re
-import bisect
 
 import matplotlib.pyplot as plt
 

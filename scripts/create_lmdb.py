@@ -38,8 +38,8 @@ def create_lmdb(dataset, raw_dir, lmdb_dir, zip_img=False, filter_file=''):
         else:
             nbytes_per_frm = get_FileSize(frm_path_lst[0])
 
-        nbytes += len(frm_path_lst)*nbytes_per_frm
-    alloc_size = round(1.5*nbytes)
+        nbytes += len(frm_path_lst) * nbytes_per_frm
+    alloc_size = round(1.5 * nbytes)
     print(f'{alloc_size / (1 << 30):.2f} GB')
 
     # create lmdb environment
