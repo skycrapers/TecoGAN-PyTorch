@@ -22,7 +22,7 @@ def split(pattern, string):
 
 def parse_log(log_file):
     # define loss patterns
-    loss_pattern = r'.*\[epoch:.*\| iter: (\d+).*\] (.*)'
+    loss_pattern = r'.*\[epoch:\s+.*\| iter:\s+(\d+).*\] (.*\|)'
 
     # load log file
     with open(log_file, 'r') as f:
@@ -36,7 +36,10 @@ def parse_log(log_file):
             iter = int(loss_match.group(1))
             append(loss_dict, 'iter', iter)
             for s in split(',', loss_match.group(2)):
-                if s:
+                if ':' in s:
+                    if '|' in s:
+                        s = str.split(s, '|')[0]
+
                     k, v = split(':', s)
                     append(loss_dict, k, float(v))
 
