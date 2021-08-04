@@ -1,15 +1,15 @@
-import os
-import os.path as osp
 import math
+import os.path as osp
 import time
+from datetime import datetime
 
 import torch
 
 from data import create_dataloader
+from metrics.metric_calculator import MetricCalculator
 from models import define_model
 from models.networks import define_generator
-from metrics.metric_calculator import MetricCalculator
-from utils import dist_utils, base_utils, data_utils
+from utils import base_utils, data_utils, dist_utils
 
 
 def train(opt):
@@ -36,6 +36,7 @@ def train(opt):
     base_utils.log_info(f'Total epochs needed: {total_epoch} for {total_iter} iterations')
 
     # train
+    start_time = time.time()
     for epoch in range(total_epoch):
         if opt['dist']:
             train_loader.sampler.set_epoch(epoch)
@@ -44,10 +45,8 @@ def train(opt):
             # update iter
             iter += 1
             curr_iter = start_iter + iter
-            if iter > total_iter: break
-
-            # update learning rate
-            model.update_learning_rate()
+            if iter > total_iter:
+                break
 
             # prepare data
             model.prepare_data(data)
@@ -55,18 +54,29 @@ def train(opt):
             # train a mini-batch
             model.train()
 
+            # update learning rate
+            model.update_learning_rate()
+
             # update running log
             model.reduce_log()  # for distributed training
             model.update_running_log()
 
             # print messages
             if log_freq > 0 and curr_iter % log_freq == 0:
-                msg = model.get_format_msg(epoch, curr_iter)
-                base_utils.log_info(msg)
+                ckpt_time = time.time() - start_time
+                eta = int(ckpt_time * (total_iter - curr_iter) / curr_iter)
+                eta = datetime.fromtimestamp(eta) - datetime.fromtimestamp(0)
+
+                msg = model.get_format_msg(epoch, curr_iter, total_epoch, total_iter)
+                base_utils.log_info(f"{msg} | eta: {str(eta)}")
 
             # save model
             if ckpt_freq > 0 and curr_iter % ckpt_freq == 0:
                 model.save(curr_iter)
+
+                filename = f'G_iter{curr_iter}.pth'
+                save_path = osp.join(model.ckpt_dir, filename)
+                base_utils.log_info(f"save model in {save_path}")
 
             # evaluate model
             if test_freq > 0 and curr_iter % test_freq == 0:
@@ -76,7 +86,8 @@ def train(opt):
                 # for each testset
                 for dataset_idx in sorted(opt['dataset'].keys()):
                     # select test dataset
-                    if 'test' not in dataset_idx: continue
+                    if 'test' not in dataset_idx:
+                        continue
 
                     ds_name = opt['dataset'][dataset_idx]['name']
                     base_utils.log_info(f'Testing on {ds_name} dataset')
@@ -135,7 +146,7 @@ def test(opt):
     for load_path in opt['model']['generator']['load_path_lst']:
         # set model index
         model_idx = osp.splitext(osp.split(load_path)[-1])[0]
-        
+
         # log
         base_utils.log_info(f'\n{"="*40}')
         base_utils.log_info(f'Testing model: {model_idx}')
@@ -175,7 +186,7 @@ def test(opt):
                     data_utils.save_sequence(
                         res_seq_dir, hr_seq, data['frm_idx'], to_bgr=True)
 
-            base_utils.log_info('-'*40)
+            base_utils.log_info('-' * 40)
 
     # logging
     base_utils.log_info(f'Finish testing\n{"="*40}')

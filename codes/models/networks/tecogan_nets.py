@@ -4,12 +4,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from .base_nets import BaseSequenceGenerator, BaseSequenceDiscriminator
-from utils.net_utils import space_to_depth, backward_warp, get_upsampling_func
-from utils.net_utils import initialize_weights
+from metrics.model_summary import parse_model_info, register
 from utils.data_utils import float32_to_uint8
-from metrics.model_summary import register, parse_model_info
+from utils.net_utils import backward_warp, get_upsampling_func, space_to_depth
+
+from .base_nets import BaseSequenceDiscriminator, BaseSequenceGenerator
 
 
 # ====================== generator modules ====================== #
@@ -21,7 +20,7 @@ class FNet(nn.Module):
         super(FNet, self).__init__()
 
         self.encoder1 = nn.Sequential(
-            nn.Conv2d(2*in_nc, 32, 3, 1, 1, bias=True),
+            nn.Conv2d(2 * in_nc, 32, 3, 1, 1, bias=True),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Conv2d(32, 32, 3, 1, 1, bias=True),
             nn.LeakyReLU(0.2, inplace=True),
@@ -190,7 +189,7 @@ class FRNet(BaseSequenceGenerator):
         hr_data = []
         hr_prev = self.srnet(
             lr_data[:, 0, ...],
-            torch.zeros(n, (self.scale**2)*c, lr_h, lr_w, dtype=torch.float32,
+            torch.zeros(n, (self.scale**2) * c, lr_h, lr_w, dtype=torch.float32,
                         device=lr_data.device))
         hr_data.append(hr_prev)
 
@@ -233,12 +232,12 @@ class FRNet(BaseSequenceGenerator):
         lr_flow = self.fnet(lr_curr, lr_prev)
 
         # pad if size is not a multiple of 8
-        pad_h = lr_curr.size(2) - lr_curr.size(2)//8*8
-        pad_w = lr_curr.size(3) - lr_curr.size(3)//8*8
+        pad_h = lr_curr.size(2) - lr_curr.size(2) // 8 * 8
+        pad_w = lr_curr.size(3) - lr_curr.size(3) // 8 * 8
         lr_flow_pad = F.pad(lr_flow, (0, pad_w, 0, pad_h), 'reflect')
 
         # upsample lr flow
-        hr_flow = self.scale*self.upsample_func(lr_flow_pad)
+        hr_flow = self.scale * self.upsample_func(lr_flow_pad)
 
         # warp hr_prev
         hr_prev_warp = backward_warp(hr_prev, hr_flow)
@@ -264,7 +263,7 @@ class FRNet(BaseSequenceGenerator):
         # forward
         hr_seq = []
         lr_prev = torch.zeros(1, c, h, w, dtype=torch.float32).to(device)
-        hr_prev = torch.zeros(1, c, s*h, s*w, dtype=torch.float32).to(device)
+        hr_prev = torch.zeros(1, c, s * h, s * w, dtype=torch.float32).to(device)
 
         with torch.no_grad():
             for i in range(tot_frm):
@@ -285,7 +284,7 @@ class FRNet(BaseSequenceGenerator):
         # generate dummy input data
         lr_curr = torch.rand(1, c, lr_h, lr_w, dtype=torch.float32).to(device)
         lr_prev = torch.rand(1, c, lr_h, lr_w, dtype=torch.float32).to(device)
-        hr_prev = torch.rand(1, c, s*lr_h, s*lr_w, dtype=torch.float32).to(device)
+        hr_prev = torch.rand(1, c, s * lr_h, s * lr_w, dtype=torch.float32).to(device)
 
         data_list = [lr_curr, lr_prev, hr_prev]
         return data_list
@@ -301,10 +300,10 @@ class FRNet(BaseSequenceGenerator):
         gflops_dict['FNet'], params_dict['FNet'] = parse_model_info(self.fnet)
 
         # profile module 2: sr module
-        pad_h = lr_curr.size(2) - lr_curr.size(2)//8*8
-        pad_w = lr_curr.size(3) - lr_curr.size(3)//8*8
+        pad_h = lr_curr.size(2) - lr_curr.size(2) // 8 * 8
+        pad_w = lr_curr.size(3) - lr_curr.size(3) // 8 * 8
         lr_flow_pad = F.pad(lr_flow, (0, pad_w, 0, pad_h), 'reflect')
-        hr_flow = self.scale*self.upsample_func(lr_flow_pad)
+        hr_flow = self.scale * self.upsample_func(lr_flow_pad)
         hr_prev_warp = backward_warp(hr_prev, hr_flow)
         _ = register(self.srnet, [lr_curr, space_to_depth(hr_prev_warp, self.scale)])
         gflops_dict['SRNet'], params_dict['SRNet'] = parse_model_info(self.srnet)
@@ -364,7 +363,7 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
 
         # input conv.
         self.conv_in = nn.Sequential(
-            nn.Conv2d(in_nc*tempo_range*mult, 64, 3, 1, 1, bias=True),
+            nn.Conv2d(in_nc * tempo_range * mult, 64, 3, 1, 1, bias=True),
             nn.LeakyReLU(0.2, inplace=True))
 
         # discriminator block
@@ -490,7 +489,7 @@ class SpatialDiscriminator(BaseSequenceDiscriminator):
 
         # input conv
         self.conv_in = nn.Sequential(
-            nn.Conv2d(in_nc*tempo_range*mult, 64, 3, 1, 1, bias=True),
+            nn.Conv2d(in_nc * tempo_range * mult, 64, 3, 1, 1, bias=True),
             nn.LeakyReLU(0.2, inplace=True))
 
         # discriminator block

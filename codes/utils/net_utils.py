@@ -116,15 +116,15 @@ class BicubicUpsample(nn.Module):
 
         # calculate weights (according to Eq.(6) in the reference paper)
         cubic = torch.FloatTensor([
-            [0, a, -2*a, a],
+            [0, a, -2 * a, a],
             [1, 0, -(a + 3), a + 2],
-            [0, -a, (2*a + 3), -(a + 2)],
+            [0, -a, (2 * a + 3), -(a + 2)],
             [0, 0, a, -a]
         ])
 
         kernels = [
             torch.matmul(cubic, torch.FloatTensor([1, s, s**2, s**3]))
-            for s in [1.0*d/scale_factor for d in range(scale_factor)]
+            for s in [1.0 * d / scale_factor for d in range(scale_factor)]
         ]  # s = x - floor(x)
 
         # register parameters
@@ -136,7 +136,7 @@ class BicubicUpsample(nn.Module):
         f = self.scale_factor
 
         # merge n&c
-        input = input.reshape(n*c, 1, h, w)
+        input = input.reshape(n * c, 1, h, w)
 
         # pad input (left, right, top, bottom)
         input = F.pad(input, (1, 2, 1, 2), mode='replicate')
@@ -144,15 +144,14 @@ class BicubicUpsample(nn.Module):
         # calculate output (vertical expansion)
         kernel_h = self.kernels.view(f, 1, 4, 1)
         output = F.conv2d(input, kernel_h, stride=1, padding=0)
-        output = output.permute(0, 2, 1, 3).reshape(n*c, 1, f*h, w + 3)
+        output = output.permute(0, 2, 1, 3).reshape(n * c, 1, f * h, w + 3)
 
         # calculate output (horizontal expansion)
         kernel_w = self.kernels.view(f, 1, 1, 4)
         output = F.conv2d(output, kernel_w, stride=1, padding=0)
-        output = output.permute(0, 2, 3, 1).reshape(n*c, 1, f*h, f*w)
+        output = output.permute(0, 2, 3, 1).reshape(n * c, 1, f * h, f * w)
 
         # split n&c
-        output = output.reshape(n, c, f*h, f*w)
+        output = output.reshape(n, c, f * h, f * w)
 
         return output
-

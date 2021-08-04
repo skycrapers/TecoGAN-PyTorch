@@ -22,12 +22,12 @@ class UnpairedLMDBDataset(BaseDataset):
         # use partial videos
         if hasattr(self, 'filter_file') and self.filter_file is not None:
             with open(self.filter_file, 'r') as f:
-                sel_seqs = { line.strip() for line in f }
+                sel_seqs = {line.strip() for line in f}
             self.keys = list(filter(
                 lambda x: self.parse_lmdb_key(x)[0] in sel_seqs, self.keys))
 
         # register parameters
-        self.env = None
+        self.env = self.init_lmdb(self.seq_dir)
 
     def __len__(self):
         return len(self.keys)
@@ -64,7 +64,7 @@ class UnpairedLMDBDataset(BaseDataset):
                 frms.append(frm[:, top: top + c_h, left: left + c_w].copy())
         else:
             # read frames
-            for i in range(cur_frm, cur_frm + self.tempo_extent):
+            def get_frames(i):
                 if i >= tot_frm:
                     # reflect temporal paddding, e.g., (0,1,2) -> (0,1,2,1,0)
                     key = '{}_{}x{}x{}_{:04d}'.format(
@@ -75,6 +75,10 @@ class UnpairedLMDBDataset(BaseDataset):
 
                 frm = self.read_lmdb_frame(self.env, key, size=(h, w, c))
                 frm = frm.transpose(2, 0, 1)  # chw|rgb|uint8
+                return frm
+
+            for i in range(cur_frm, cur_frm + self.tempo_extent):
+                frm = get_frames(i)
                 frms.append(frm)
 
         frms = np.stack(frms)  # tchw|rgb|uint8

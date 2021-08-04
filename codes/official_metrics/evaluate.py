@@ -1,7 +1,6 @@
+import argparse
 import os
 import os.path as osp
-import argparse
-
 
 if __name__ == '__main__':
     # get agrs
@@ -43,4 +42,3 @@ if __name__ == '__main__':
             osp.join(ToS3_SR_dir, 'metric_log'),
             ','.join(ToS3_SR_lst),
             ','.join(ToS3_GT_lst)))
-

@@ -1,12 +1,11 @@
-from collections import OrderedDict
 import os.path as osp
+from collections import OrderedDict
 
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
-
 from utils.data_utils import create_kernel
 from utils.dist_utils import master_only
 
@@ -63,19 +62,19 @@ class BaseModel():
             # set params
             scale = self.opt['scale']
             sigma = self.opt['dataset']['degradation'].get('sigma', 1.5)
-            border_size = int(sigma*3.0)
+            border_size = int(sigma * 3.0)
 
             gt_with_border = data['gt'].to(self.device)
             n, t, c, gt_h, gt_w = gt_with_border.size()
-            lr_h = (gt_h - 2*border_size)//scale
-            lr_w = (gt_w - 2*border_size)//scale
+            lr_h = (gt_h - 2 * border_size) // scale
+            lr_w = (gt_w - 2 * border_size) // scale
 
             # create blurring kernel
             if self.blur_kernel is None:
                 self.blur_kernel = create_kernel(sigma).to(self.device)
 
             # generate lr data
-            gt_with_border = gt_with_border.view(n*t, c, gt_h, gt_w)
+            gt_with_border = gt_with_border.view(n * t, c, gt_h, gt_w)
             lr_data = F.conv2d(
                 gt_with_border, self.blur_kernel, stride=scale, bias=None,
                 padding=0)
@@ -84,10 +83,10 @@ class BaseModel():
             # remove gt border
             gt_data = gt_with_border[
                 ...,
-                border_size: border_size + scale*lr_h,
-                border_size: border_size + scale*lr_w
+                border_size: border_size + scale * lr_h,
+                border_size: border_size + scale * lr_w
             ]
-            self.gt_data = gt_data.view(n, t, c, scale*lr_h, scale*lr_w)
+            self.gt_data = gt_data.view(n, t, c, scale * lr_h, scale * lr_w)
 
     def train(self):
         pass
@@ -154,9 +153,9 @@ class BaseModel():
     def get_running_log(self):
         return self.running_log_dict
 
-    def get_format_msg(self, epoch, iter):
+    def get_format_msg(self, epoch, iter, total_epoch, total_iter):
         # generic info
-        msg = f'[epoch: {epoch} | iter: {iter}'
+        msg = f'[epoch: {epoch:3d}/{total_epoch} | iter: {iter:6d}/{total_iter}'
         for lr_type, lr in self.get_current_learning_rate().items():
             msg += f' | {lr_type}: {lr:.2e}'
         msg += '] '

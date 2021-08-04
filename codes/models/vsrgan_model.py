@@ -1,14 +1,14 @@
 from collections import OrderedDict
 
 import torch
-import torch.optim as optim
 import torch.distributed as dist
+import torch.optim as optim
+from utils import base_utils, net_utils
 
-from .vsr_model import VSRModel
-from .networks import define_generator, define_discriminator
+from .networks import define_discriminator, define_generator
 from .networks.vgg_nets import VGGFeatureExtractor
 from .optim import define_criterion, define_lr_schedule
-from utils import base_utils, net_utils, dist_utils
+from .vsr_model import VSRModel
 
 
 class VSRGANModel(VSRModel):

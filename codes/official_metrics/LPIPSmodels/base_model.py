@@ -1,15 +1,13 @@
 import os
+
 import numpy as np
 import torch
-import LPIPSmodels.util as util
-from torch.autograd import Variable
-from pdb import set_trace as st
-from IPython import embed
+
 
 class BaseModel():
     def __init__(self):
-        pass;
-        
+        pass
+
     def name(self):
         return 'BaseModel'
 
@@ -19,9 +17,6 @@ class BaseModel():
         # self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
 
     def forward(self):
-        pass
-
-    def get_image_paths(self):
         pass
 
     def optimize_parameters(self):
@@ -47,7 +42,7 @@ class BaseModel():
         # embed()
         save_filename = '%s_net_%s.pth' % (epoch_label, network_label)
         save_path = os.path.join(self.save_dir, save_filename)
-        print('Loading network from %s'%save_path)
+        print('Loading network from %s' % save_path)
         network.load_state_dict(torch.load(save_path))
 
     def update_learning_rate():
@@ -57,6 +52,5 @@ class BaseModel():
         return self.image_paths
 
     def save_done(self, flag=False):
-        np.save(os.path.join(self.save_dir, 'done_flag'),flag)
-        np.savetxt(os.path.join(self.save_dir, 'done_flag'),[flag,],fmt='%i')
-
+        np.save(os.path.join(self.save_dir, 'done_flag'), flag)
+        np.savetxt(os.path.join(self.save_dir, 'done_flag'), [flag, ], fmt='%i')

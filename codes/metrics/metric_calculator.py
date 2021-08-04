@@ -1,15 +1,15 @@
+import json
 import os
 import os.path as osp
-import json
 from collections import OrderedDict
 
-import numpy as np
 import cv2
+import numpy as np
 import torch
 import torch.distributed as dist
-
-from utils import base_utils, data_utils, net_utils
+from utils import base_utils, data_utils
 from utils.dist_utils import master_only
+
 from .LPIPS.models.dist_model import DistModel
 
 
