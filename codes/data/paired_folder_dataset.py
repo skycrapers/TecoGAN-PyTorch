@@ -53,7 +53,7 @@ class PairedFolderDataset(BaseDataset):
         gt_tsr = torch.from_numpy(np.ascontiguousarray(gt_seq))  # uint8
         lr_tsr = torch.from_numpy(np.ascontiguousarray(lr_seq))  # float32
 
-        # gt: thwc|rgb||uint8 | lr: thwc|rgb|float32
+        # gt: thwc|rgb|uint8 | lr: thwc|rgb|float32
         return {
             'gt': gt_tsr,
             'lr': lr_tsr,

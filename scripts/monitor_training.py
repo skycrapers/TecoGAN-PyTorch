@@ -162,14 +162,16 @@ if __name__ == '__main__':
     if args.model == 'FRVSR':
         # select experiments
         exp_id_lst = [
-            # experiment dir
+            # experiment dirs
             'experiments_BD/FRVSR/001',
         ]
+
         # select losses
         loss_lst = [
             'l_pix_G',  # pixel loss
             'l_warp_G',  # warping loss
         ]
+
         # select metrics
         metric_lst = [
             'PSNR',
@@ -178,9 +180,10 @@ if __name__ == '__main__':
     elif args.model == 'TecoGAN':
         # select experiments
         exp_id_lst = [
-            # experiment dir
+            # experiment dirs
             'experiments_BD/TecoGAN/001',
         ]
+
         # select losses
         loss_lst = [
             'l_pix_G',   # pixel loss
@@ -191,6 +194,7 @@ if __name__ == '__main__':
             'p_real_D',
             'p_fake_D',
         ]
+
         # select metrics
         metric_lst = [
             'PSNR',

@@ -158,6 +158,11 @@ python ./scripts/monitor_training.py --m TecoGAN -d Vid4
 ```
 > Note that the validation results are NOT exactly the same as the testing results mentioned above due to different implementation of the metrics. The differences are caused by croping policy, LPIPS version and some other issues.
 
+<p align = "center">
+    <img src="resources/losses.png" width="640" />
+    <img src="resources/metrics.png" width="640" />
+</p>
+
 
 
 ## Benchmark
