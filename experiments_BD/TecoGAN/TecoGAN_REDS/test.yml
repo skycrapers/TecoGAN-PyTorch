@@ -1,0 +1,50 @@
+# basic configs
+scale: 4
+manual_seed: 0
+verbose: false
+
+
+# dataset configs
+dataset:
+  degradation:
+    type: BD
+    sigma: 1.5
+
+  test:
+    name: REDS
+    gt_seq_dir: data/REDS/Raw
+    lr_seq_dir: ~
+    filter_list: ['000', '011', '015', '020']
+    num_worker_per_gpu: 4
+    pin_memory: true
+
+
+# model configs
+model:
+  name: TecoGAN
+
+  generator:
+    name: FRNet  # frame-recurrent network
+    in_nc: 3
+    out_nc: 3
+    nf: 64
+    nb: 10
+
+    load_path: experiments_BD/TecoGAN/TecoGAN_REDS/train/ckpt/G_iter500000.pth
+
+  discriminator:
+    name: STNet  # spatio-temporal network
+    in_nc: 3
+    tempo_range: 3
+
+    load_path: ~
+
+
+# validation configs
+test:
+  # whether to save the generated SR results
+  save_res: true
+  res_dir: ~   # use default dir
+
+  padding_mode: reflect
+  num_pad_front: 5

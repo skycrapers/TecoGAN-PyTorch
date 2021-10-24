@@ -1,20 +1,20 @@
-function generate_lr_bic()
+function generate_lr_bi()
 
 up_scale = 4;
 mod_scale = 4;
 idx = 0;
-filepaths = dir('/home/data/djn/Datasets/Vimeo200-Subset/train_sharp/*/*.png');
+filepaths = dir('./data/VimeoTecoGAN/Raw/*/*.png');
 
 for i = 1 : length(filepaths)
     [~,imname,ext] = fileparts(filepaths(i).name);
     folder_path = filepaths(i).folder;
-    save_lr_folder = strrep(folder_path, 'train_sharp', 'train_bicubic4x_lr')
-	  save_bic_folder = strrep(folder_path, 'train_sharp', 'train_bicubic4x_bic')
+    save_lr_folder = strrep(folder_path, 'Raw', 'Bicubic4xLR')
+	save_bi_folder = strrep(folder_path, 'Raw', 'Bicubic4xBI')
     if ~exist(save_lr_folder, 'dir')
         mkdir(save_lr_folder);
     end
-	if ~exist(save_bic_folder, 'dir')
-        mkdir(save_bic_folder);
+	if ~exist(save_bi_folder, 'dir')
+        mkdir(save_bi_folder);
     end
     if isempty(imname)
         disp('Ignore . folder.');
@@ -35,8 +35,8 @@ for i = 1 : length(filepaths)
         if exist('save_lr_folder', 'var')
             imwrite(im_LR, fullfile(save_lr_folder, [imname, '.png']));
         end
-        if exist('save_bic_folder', 'var')
-            imwrite(im_BI, fullfile(save_bic_folder, [imname, '.png']));
+        if exist('save_bi_folder', 'var')
+            imwrite(im_BI, fullfile(save_bi_folder, [imname, '.png']));
         end
     end
 end

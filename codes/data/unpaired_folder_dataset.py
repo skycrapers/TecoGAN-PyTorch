@@ -9,17 +9,15 @@ from .base_dataset import BaseDataset
 from utils.base_utils import retrieve_files
 
 
-class PairedFolderDataset(BaseDataset):
-    """ Folder dataset for paired data. It supports both BI & BD degradation.
+class UnpairedFolderDataset(BaseDataset):
+    """ Folder dataset for unpaired data. It only supports BD degradation.
     """
 
     def __init__(self, data_opt, **kwargs):
-        super(PairedFolderDataset, self).__init__(data_opt, **kwargs)
+        super(UnpairedFolderDataset, self).__init__(data_opt, **kwargs)
 
         # get keys
-        gt_keys = sorted(os.listdir(self.gt_seq_dir))
-        lr_keys = sorted(os.listdir(self.lr_seq_dir))
-        self.keys = sorted(list(set(gt_keys) & set(lr_keys)))
+        self.keys = sorted(os.listdir(self.gt_seq_dir))
 
         # filter keys
         sel_keys = set(self.keys)
@@ -39,15 +37,19 @@ class PairedFolderDataset(BaseDataset):
         # load gt frames
         gt_seq = []
         for frm_path in retrieve_files(osp.join(self.gt_seq_dir, key)):
-            frm = cv2.imread(frm_path)[..., ::-1]
-            gt_seq.append(frm)
+            gt_frm = cv2.imread(frm_path)[..., ::-1]
+            gt_seq.append(gt_frm)
         gt_seq = np.stack(gt_seq)  # thwc|rgb|uint8
 
-        # load lr frames
+        # generate lr frames on the fly
         lr_seq = []
-        for frm_path in retrieve_files(osp.join(self.lr_seq_dir, key)):
-            frm = cv2.imread(frm_path)[..., ::-1].astype(np.float32) / 255.0
-            lr_seq.append(frm)
+        for i in range(gt_seq.shape[0]):
+            gt_frm = gt_seq[i]
+            # perform 4x BD down-sampling
+            blur_frm = cv2.GaussianBlur(
+                gt_frm, (self.ksize, self.ksize), sigmaX=self.sigma)  # hwc|rgb|uint8
+            lr_frm = blur_frm[::self.scale, ::self.scale, ::].astype(np.float32) / 255.0
+            lr_seq.append(lr_frm)
         lr_seq = np.stack(lr_seq)  # thwc|rgb|float32
 
         # convert to tensor

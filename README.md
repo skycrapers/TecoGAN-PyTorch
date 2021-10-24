@@ -16,13 +16,14 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 
 
 ### Updates
-- Upgraded codebase, now support Multi-GPUs training & testing.
+- 2021.10: Supported model training & testing on the [REDS](https://seungjunnah.github.io/Datasets/reds.html) dataset.
+- 2021.07: Upgraded codebase, now support multi-GPU training & testing.
 
 
 
 ### Features
 - **Better Performance**: This repo provides model with smaller size yet better performance than the official repo. See our [Benchmark](https://github.com/skycrapers/TecoGAN-PyTorch#benchmark).
-- **Multiple Degradations**: This repo supports two types of degradation, i.e., BI & BD. Please refer to [this wiki]() for more details about degradation types.
+- **Multiple Degradations**: This repo supports two types of degradation, BI (Matlab's imresize with the option bicubic) & BD (Gaussian Blurring + Down-sampling). <!--Please refer to [this wiki]() for more details about degradation types.-->
 - **Unified Framework**: This repo provides a unified framework for distortion-based and perception-based VSR methods.
 
 
@@ -63,18 +64,15 @@ The dataset structure is shown as below.
 ```tex
 data
   ├─ Vid4
-    ├─ GT                # Ground-Truth (GT) video sequences
+    ├─ GT                # Ground-Truth (GT) sequences
       └─ calendar
-        ├─ 0001.png
-        └─ ...
-    ├─ Gaussian4xLR      # Low Resolution (LR) video sequences in BD degradation
+        └─ ***.png
+    ├─ Gaussian4xLR      # Low Resolution (LR) sequences in BD degradation
       └─ calendar
-        ├─ 0001.png
-        └─ ...
-    └─ Bicubic4xLR       # Low Resolution (LR) video sequences in BI degradation
+        └─ ***.png
+    └─ Bicubic4xLR       # Low Resolution (LR) sequences in BI degradation
       └─ calendar
-        ├─ 0001.png
-        └─ ...
+        └─ ***.png
   └─ ToS3
     ├─ GT
     ├─ Gaussian4xLR
@@ -85,11 +83,11 @@ data
 ```bash
 bash ./scripts/download/download_models.sh BD TecoGAN
 ```
-> You can download the model from [[BD degradation](https://drive.google.com/file/d/13FPxKE6q7tuRrfhTE7GB040jBeURBj58/view?usp=sharing)] or [[BI degradation](https://drive.google.com/file/d/1ie1F7wJcO4mhNWK8nPX7F0LgOoPzCwEu/view?usp=sharing)], and put it under `./pretrained_models`.
+> You can download the model from [[BD](https://drive.google.com/file/d/13FPxKE6q7tuRrfhTE7GB040jBeURBj58/view?usp=sharing)] or [[BI](https://drive.google.com/file/d/1ie1F7wJcO4mhNWK8nPX7F0LgOoPzCwEu/view?usp=sharing)], and put it under `./pretrained_models`.
 
-3. Upsample the LR videos by TecoGAN. The results will be saved at `./results`. You can specify which model and how many gpus to use in `test.sh`.
+3. Upsample the LR videos by TecoGAN. The results will be saved at `./results`. You can specify which model and how many gpus to be used in `test.sh`.
 ```bash
-bash ./test.sh BD TecoGAN
+bash ./test.sh BD TecoGAN/TecoGAN_VimeoTecoGAN
 ```
 
 4. Evaluate the upsampled results using the official metrics. These codes are borrowed from [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), with minor modifications to adapt to the BI degradation.
@@ -99,60 +97,58 @@ python ./codes/official_metrics/evaluate.py -m TecoGAN_BD_iter500000
 
 5. Profile model (FLOPs, parameters and speed). You can modify the last argument to specify the size of the LR video.
 ```bash
-bash ./profile.sh BD TecoGAN 3x134x320
+bash ./profile.sh BD TecoGAN/TecoGAN_VimeoTecoGAN 3x134x320
 ```
 
 ## Training
-1. Download the official training dataset according to the instructions in [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), rename to `VimeoTecoGAN`, and place under `./data`.
+**Note:** Due to the inaccessibility of the VimeoTecoGAN dataset, we recommend using other public datasets, e.g., REDS, for model training. To use REDS as the training dataset, just download it from [here](https://seungjunnah.github.io/Datasets/reds.html) and replace the following `VimeoTecoGAN` to `REDS`.
+
+1. Download the official training dataset according to the instructions in [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), rename to `VimeoTecoGAN/Raw`, and place under `./data`.
 
 2. Generate LMDB for GT data to accelerate IO. The LR counterpart will then be generated on the fly during training.
 ```bash
-python ./scripts/create_lmdb.py --dataset VimeoTecoGAN --data_type GT
+python ./scripts/create_lmdb.py --dataset VimeoTecoGAN --raw_dir ./data/VimeoTecoGAN/Raw --lmdb_dir ./data/VimeoTecoGAN/GT.lmdb
 ```
 
 The following shows the dataset structure after finishing the above two steps.
 ```tex
 data
-  ├─ VimeoTecoGAN          # Original (raw) dataset
-    ├─ scene_2000
-      ├─ col_high_0000.png
-      ├─ col_high_0001.png
+  ├─ VimeoTecoGAN
+    ├─ Raw                 # Raw dataset
+      ├─ scene_2000
+        └─ ***.png
+      ├─ scene_2001
+        └─ ***.png
       └─ ...
-    ├─ scene_2001
-      ├─ col_high_0000.png
-      ├─ col_high_0001.png
-      └─ ...
-    └─ ...
-  └─ VimeoTecoGAN.lmdb     # LMDB dataset
-    ├─ data.mdb
-    ├─ lock.mdb
-    └─ meta_info.pkl       # each key has format: [vid]_[total_frame]x[h]x[w]_[i-th_frame]
+    └─ GT.lmdb             # LMDB dataset
+      ├─ data.mdb
+      ├─ lock.mdb
+      └─ meta_info.pkl     # each key has format: [vid]_[total_frame]x[h]x[w]_[i-th_frame]
 ```
 
-3. **(Optional, this step is only required for BI degradation)** Manually generate the LR sequences with Matlab's imresize function, and then create LMDB for them.
+3. **(Optional, this step is only required for BI degradation)** Manually generate the LR sequences with the Matlab's imresize function, and then create LMDB for them.
 ```bash
-# Generate the raw LR video sequences. Results will be saved at ./data/Bicubic4xLR
-matlab -nodesktop -nosplash -r "cd ./scripts; generate_lr_BI"
+# Generate the raw LR video sequences. Results will be saved at ./data/VimeoTecoGAN/Bicubic4xLR
+matlab -nodesktop -nosplash -r "cd ./scripts; generate_lr_bi"
 
-# Create LMDB for the raw LR video sequences
-python ./scripts/create_lmdb.py --dataset VimeoTecoGAN --data_type Bicubic4xLR
+# Create LMDB for the LR video sequences
+python ./scripts/create_lmdb.py --dataset VimeoTecoGAN --raw_dir ./data/VimeoTecoGAN/Bicubic4xLR --lmdb_dir ./data/VimeoTecoGAN/Bicubic4xLR.lmdb
 ```
 
-4. Train a FRVSR model first. FRVSR has the same generator as TecoGAN, but without perceptual training (i.e., GAN and perceptual losses). When the training is complete, copy and rename the last checkpoint weight from `./experiments_BD/FRVSR/001/train/ckpt/G_iter400000.pth` to `./pretrained_models/FRVSR_BD_iter400000.pth`. A pre-trained FRVSR model offers a better initialization for the following TecoGAN training.
+4. Train a FRVSR model first, which can provide a better initialization for the subsequent TecoGAN training. FRVSR has the same generator as TecoGAN, but without perceptual training (GAN and perceptual losses).
 ```bash
-bash ./train.sh BD FRVSR
+bash ./train.sh BD FRVSR/FRVSR_VimeoTecoGAN
 ```
-> You can download and use our pre-trained FRVSR model [[BD degradation](https://drive.google.com/file/d/11kPVS04a3B3k0SD-mKEpY_Q8WL7KrTIA/view?usp=sharing)] [[BI degradation](https://drive.google.com/file/d/1wejMAFwIBde_7sz-H7zwlOCbCvjt3G9L/view?usp=sharing)] without training from scratch.
->```bash
->bash ./scripts/download/download_models.sh BD FRVSR
->```
+> You can download and use our pre-trained FRVSR models instead of training from scratch. [[BD-VimeoTecoGAN](https://drive.google.com/file/d/11kPVS04a3B3k0SD-mKEpY_Q8WL7KrTIA/view?usp=sharing)] [[BI-VimeoTecoGAN](https://drive.google.com/file/d/1wejMAFwIBde_7sz-H7zwlOCbCvjt3G9L/view?usp=sharing)] [[BD-REDS]()]
 
-5. Train a TecoGAN model. You can specify which gpus to use in `train.sh`. By default, the training is conducted in the background and the output info will be logged in `./experiments_BD/TecoGAN/001/train/train.log`.
+When the training of FRVSR is complete, set the generator's `load_path` in `experiments_BD/TecoGAN/TecoGAN_VimeoTecoGAN/train.yml` to the last checkpoint weight of the trained FRVSR model, e.g., `./pretrained_models/FRVSR_BD_iter400000.pth`.
+
+5. Train a TecoGAN model. You can specify which gpu to be used in `train.sh`. By default, the training is conducted in the background and the output info will be logged in `./experiments_BD/TecoGAN/TecoGAN_VimeoTecoGAN/train/train.log`.
 ```bash
-bash ./train.sh BD TecoGAN
+bash ./train.sh BD TecoGAN/TecoGAN_VimeoTecoGAN
 ```
 
-6. To monitor the training process and visualize the validation performance, run the following script.
+6. Run the following script to monitor the training process and visualize the validation performance, .
 ```bash
 python ./scripts/monitor_training.py --m TecoGAN -d Vid4
 ```

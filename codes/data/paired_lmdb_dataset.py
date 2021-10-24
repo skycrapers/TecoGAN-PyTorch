@@ -10,9 +10,10 @@ from .base_dataset import BaseDataset
 
 
 class PairedLMDBDataset(BaseDataset):
+    """ LMDB dataset for paired data (for BI degradation)
+    """
+
     def __init__(self, data_opt, **kwargs):
-        """ LMDB dataset for paired data (for BI degradation)
-        """
         super(PairedLMDBDataset, self).__init__(data_opt, **kwargs)
 
         # load meta info

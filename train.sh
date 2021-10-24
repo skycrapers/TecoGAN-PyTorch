@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
-# This script is used to train a model
+# This script is used to train a model.
 
 # basic settings
 root_dir=.
 degradation=$1
 model=$2
-exp_id=001
 gpu_ids=0,1  # set to -1 to use cpu
 master_port=4321
 
@@ -20,11 +19,11 @@ else
 fi
 
 
-exp_dir=${root_dir}/experiments_${degradation}/${model}/${exp_id}
+exp_dir=${root_dir}/experiments_${degradation}/${model}
 # check
 if [ -d "$exp_dir/train" ]; then
-    echo "> Experiment dir already exists: $exp_dir/train"
-    echo "> Please delete it for retraining"
+    echo ">> Experiment dir already exists: $exp_dir/train"
+    echo ">> Please delete it for retraining"
   	exit 1
 fi
 
@@ -44,7 +43,7 @@ CUDA_VISIBLE_DEVICES=${gpu_ids} \
   python ${dist_args} ${root_dir}/codes/main.py \
   --exp_dir ${exp_dir} \
   --mode train \
- --opt train${suffix}.yml \
- --gpu_ids ${gpu_ids} \
- > ${exp_dir}/train/train${suffix}.log  2>&1 &
+  --opt train${suffix}.yml \
+  --gpu_ids ${gpu_ids} \
+  > ${exp_dir}/train/train${suffix}.log  2>&1 &
 

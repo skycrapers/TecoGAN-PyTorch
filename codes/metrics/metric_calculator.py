@@ -77,7 +77,7 @@ class MetricCalculator():
                     np.mean(metric_dict_per_seq[metric_type]))
             self.metric_avg_dict[metric_type] += np.sum(metric_avg_per_seq)
 
-        # collect results from all device
+        # collect results from all devices
         if self.dist:
             for _, tensor in self.metric_avg_dict.items():
                 dist.reduce(tensor, dst=0)

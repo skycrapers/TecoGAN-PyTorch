@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
-# This script is used to evaluate a pretrained model
+# This script is used to evaluate a pretrained model.
 
 # basic settings
 root_dir=.
 degradation=$1
 model=$2
-exp_id=001
 gpu_ids=0,1
 master_port=4321
 
@@ -19,7 +18,7 @@ fi
 
 CUDA_VISIBLE_DEVICES=${gpu_ids} \
   python ${dist_args} ${root_dir}/codes/main.py \
-  --exp_dir ${root_dir}/experiments_${degradation}/${model}/${exp_id} \
+  --exp_dir ${root_dir}/experiments_${degradation}/${model} \
   --mode test \
   --opt test.yml \
   --gpu_ids ${gpu_ids}

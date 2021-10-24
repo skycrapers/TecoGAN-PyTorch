@@ -6,6 +6,7 @@ from torch.utils.data.distributed import DistributedSampler
 from .paired_lmdb_dataset import PairedLMDBDataset
 from .unpaired_lmdb_dataset import UnpairedLMDBDataset
 from .paired_folder_dataset import PairedFolderDataset
+from .unpaired_folder_dataset import UnpairedFolderDataset
 
 
 def create_dataloader(opt, phase, idx):
@@ -16,8 +17,8 @@ def create_dataloader(opt, phase, idx):
     # === create loader for training === #
     if phase == 'train':
         # check dataset
-        assert data_opt['name'] in ('VimeoTecoGAN', 'VimeoTecoGAN-sub'), \
-            'Unknown Dataset: {data_opt["name"]}'
+        assert data_opt['name'] in ('VimeoTecoGAN', 'REDS'), \
+            f'Unknown Dataset: {data_opt["name"]}'
 
         if degradation_type == 'BI':
             # create dataset
@@ -29,7 +30,7 @@ def create_dataloader(opt, phase, idx):
                 moving_factor=opt['train'].get('moving_factor', 1.0))
 
         elif degradation_type == 'BD':
-            # enlarge crop size to incorporate border size
+            # enlarge the crop size to incorporate border
             sigma = opt['dataset']['degradation']['sigma']
             enlarged_crop_size = data_opt['crop_size'] + 2 * int(sigma * 3.0)
 
@@ -66,12 +67,27 @@ def create_dataloader(opt, phase, idx):
     # === create loader for testing === #
     elif phase == 'test':
         # create data loader
-        loader = DataLoader(
-            dataset=PairedFolderDataset(data_opt),
-            batch_size=1,
-            shuffle=False,
-            num_workers=data_opt['num_worker_per_gpu'],
-            pin_memory=data_opt['pin_memory'])
+        if 'lr_seq_dir' in data_opt and data_opt['lr_seq_dir']:
+            loader = DataLoader(
+                dataset=PairedFolderDataset(data_opt),
+                batch_size=1,
+                shuffle=False,
+                num_workers=data_opt['num_worker_per_gpu'],
+                pin_memory=data_opt['pin_memory'])
+
+        else:
+            assert degradation_type == 'BD', 'lr_seq_dir is required for BI mode'
+
+            sigma = opt['dataset']['degradation']['sigma']
+            ksize = 2 * int(sigma * 3.0) + 1
+
+            loader = DataLoader(
+                dataset=UnpairedFolderDataset(
+                    data_opt, scale=opt['scale'], sigma=sigma, ksize=ksize),
+                batch_size=1,
+                shuffle=False,
+                num_workers=data_opt['num_worker_per_gpu'],
+                pin_memory=data_opt['pin_memory'])
 
     else:
         raise ValueError(f'Unrecognized phase: {phase}')

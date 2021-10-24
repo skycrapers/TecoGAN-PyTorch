@@ -9,9 +9,10 @@ from .base_dataset import BaseDataset
 
 
 class UnpairedLMDBDataset(BaseDataset):
+    """ LMDB dataset for unpaired data (for BD degradation)
+    """
+
     def __init__(self, data_opt, **kwargs):
-        """ LMDB dataset for unpaired data (for BD degradation)
-        """
         super(UnpairedLMDBDataset, self).__init__(data_opt, **kwargs)
 
         # load meta info

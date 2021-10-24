@@ -192,7 +192,10 @@ def profile(opt, lr_size, test_speed=False):
 
     # logging
     base_utils.print_options(opt['model']['generator'])
-    msg += f'{"*"*40}\nOriginal resolution: {lr_size} (To perform {scale}x SR)'
+
+    lr_size_lst = tuple(map(int, lr_size.split('x')))
+    hr_size = f'{lr_size_lst[0]}x{lr_size_lst[1]*scale}x{lr_size_lst[2]*scale}'
+    msg += f'{"*"*40}\nResolution: {lr_size} -> {hr_size} ({scale}x SR)'
 
     # create model
     net_G = define_generator(opt).to(device)
@@ -243,7 +246,7 @@ if __name__ == '__main__':
     opt = base_utils.parse_configs(args)
     # set logger
     base_utils.setup_logger('base')
-    # set dirs
+    # set paths
     base_utils.setup_paths(opt, args.mode)
 
     # === train === #
