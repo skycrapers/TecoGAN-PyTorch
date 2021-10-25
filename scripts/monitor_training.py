@@ -151,19 +151,18 @@ def monitor(root_dir, testset, exp_id_lst, loss_lst, metric_lst):
 if __name__ == '__main__':
     # parse args
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', '-m', type=str, required=True,
-                        help='TecoGAN or FRVSR')
-    parser.add_argument('--dataset', '-d', type=str, required=True,
-                        help='which testset to show')
+    parser.add_argument('--degradation', '-dg', type=str, required=True)
+    parser.add_argument('--model', '-m', type=str, required=True)
+    parser.add_argument('--dataset', '-ds', type=str, required=True)
     args = parser.parse_args()
 
     # select model
     root_dir = '.'
-    if args.model == 'FRVSR':
+    if 'FRVSR' in args.model:
         # select experiments
         exp_id_lst = [
             # experiment dirs
-            'experiments_BD/FRVSR/001',
+            f'experiments_{args.degradation}/{args.model}',
         ]
 
         # select losses
@@ -177,11 +176,11 @@ if __name__ == '__main__':
             'PSNR',
         ]
 
-    elif args.model == 'TecoGAN':
+    elif 'TecoGAN' in args.model:
         # select experiments
         exp_id_lst = [
             # experiment dirs
-            'experiments_BD/TecoGAN/001',
+            f'experiments_{args.degradation}/{args.model}',
         ]
 
         # select losses

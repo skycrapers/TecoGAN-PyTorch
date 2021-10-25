@@ -6,8 +6,8 @@
 root_dir=.
 degradation=$1
 model=$2
-gpu_ids=0,1
-master_port=4321
+gpu_ids=2,3
+master_port=4322
 
 
 # run

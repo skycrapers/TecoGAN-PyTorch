@@ -148,9 +148,9 @@ When the training of FRVSR is complete, set the generator's `load_path` in `expe
 bash ./train.sh BD TecoGAN/TecoGAN_VimeoTecoGAN
 ```
 
-6. Run the following script to monitor the training process and visualize the validation performance, .
+6. Run the following script to monitor the training process and visualize the validation performance.
 ```bash
-python ./scripts/monitor_training.py --m TecoGAN -d Vid4
+python ./scripts/monitor_training.py -dg BD -m TecoGAN/TecoGAN_VimeoTecoGAN -ds Vid4
 ```
 > Note that the validation results are NOT exactly the same as the testing results mentioned above due to different implementation of the metrics. The differences are caused by croping policy, LPIPS version and some other issues.
 

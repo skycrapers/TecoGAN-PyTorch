@@ -167,7 +167,7 @@ def test(opt):
                 # infer
                 hr_seq = model.infer(data['lr'])
 
-                # save hr results (optional)
+                # save hr results
                 if opt['test']['save_res']:
                     res_dir = osp.join(
                         opt['test']['res_dir'], ds_name, model_idx)
