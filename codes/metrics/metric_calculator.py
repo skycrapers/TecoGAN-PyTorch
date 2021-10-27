@@ -87,19 +87,22 @@ class MetricCalculator():
         for metric in self.metric_avg_dict.keys():
             self.metric_avg_dict[metric] /= num_seq
 
-    @master_only
     def display_results(self):
         # per sequence results
         for seq, metric_dict_per_seq in self.metric_dict.items():
-            base_utils.log_info(f'Sequence: {seq}')
+            print(f'Sequence: {seq}')
             for metric_type in self.metric_opt.keys():
                 avg_res = np.mean(metric_dict_per_seq[metric_type])
-                base_utils.log_info(f'\t{metric_type}: {avg_res:.6f}')
+                print(f'\t{metric_type}: {avg_res:.6f}')
 
+        self.display_average_results()
+
+    @master_only
+    def display_average_results(self):
         # average results
-        base_utils.log_info('Average')
+        print('Average')
         for metric_type, avg_result in self.metric_avg_dict.items():
-            base_utils.log_info(f'\t{metric_type}: {avg_result.item():.6f}')
+            print(f'\t{metric_type}: {avg_result.item():.6f}')
 
     @master_only
     def save_results(self, model_idx, save_path, override=False):
@@ -128,24 +131,6 @@ class MetricCalculator():
         # save results
         with open(save_path, 'w') as f:
             json.dump(json_dict, f, sort_keys=False, indent=4)
-
-    def compute_dataset_metrics(self, true_dir, pred_dir, sequence_list=None):
-        """ compute metrics for a dataset, *_dir are the root of dataset, which
-            contains several video clips/folders
-        """
-
-        # select sequences
-        if sequence_list is None:
-            sequence_list = sorted(list(
-                set(os.listdir(true_dir)) & set(os.listdir(pred_dir))))
-
-        # compute metrics for each sequence
-        for seq in sequence_list:
-            # setup paths
-            true_seq_dir = osp.join(true_dir, seq)
-            pred_seq_dir = osp.join(pred_dir, seq)
-
-            self.compute_sequence_metrics(seq, true_seq_dir, pred_seq_dir)
 
     def compute_sequence_metrics(self, seq, true_seq_dir, pred_seq_dir,
                                  pred_seq=None):

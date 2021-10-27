@@ -136,7 +136,7 @@ def test(opt):
         model_idx = osp.splitext(osp.split(load_path)[-1])[0]
         
         # log
-        base_utils.log_info(f'\n{"="*40}')
+        base_utils.log_info(f'{"="*40}')
         base_utils.log_info(f'Testing model: {model_idx}')
         base_utils.log_info(f'{"="*40}')
 
@@ -175,9 +175,6 @@ def test(opt):
                         res_seq_dir, hr_seq, data['frm_idx'], to_bgr=True)
 
             base_utils.log_info('-'*40)
-
-    # logging
-    base_utils.log_info(f'Finish testing\n{"="*40}')
 
 
 def profile(opt, lr_size, test_speed=False):
