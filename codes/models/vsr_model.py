@@ -36,7 +36,7 @@ class VSRModel(BaseModel):
         load_path_G = self.opt['model']['generator'].get('load_path')
         if load_path_G is not None:
             self.load_network(self.net_G, load_path_G)
-            base_utils.log_info('Load generator from: {}'.format(load_path_G))
+            base_utils.log_info(f'Load generator from: {load_path_G}')
 
     def set_criterions(self):
         # pixel criterion
@@ -72,7 +72,7 @@ class VSRModel(BaseModel):
         self.log_dict = OrderedDict()
 
         # pixel loss
-        pix_w = self.opt['train']['pixel_crit'].get('weight', 1)
+        pix_w = self.opt['train']['pixel_crit'].get('weight', 1.0)
         loss_pix_G = pix_w * self.pix_crit(hr_data, self.gt_data)
         loss_G += loss_pix_G
         self.log_dict['l_pix_G'] = loss_pix_G.item()
@@ -85,7 +85,7 @@ class VSRModel(BaseModel):
             lr_flow = net_G_output_dict['lr_flow']
             lr_warp = net_utils.backward_warp(lr_prev, lr_flow)
 
-            warp_w = self.opt['train']['warping_crit'].get('weight', 1)
+            warp_w = self.opt['train']['warping_crit'].get('weight', 1.0)
             loss_warp_G = warp_w * self.warp_crit(lr_warp, lr_curr)
             loss_G += loss_warp_G
             self.log_dict['l_warp_G'] = loss_warp_G.item()
@@ -97,8 +97,8 @@ class VSRModel(BaseModel):
     def infer(self, lr_data):
         """
             Parameters:
-                :param lr_data: a rgb video sequence with shape thwc
-                :return: video sequence (type np.uint8 and shape thwc)
+                :param lr_data: video sequence in shape [thwc]
+                :return: video sequence in type [uint8] and shape [thwc]
         """
 
         # canonicalize

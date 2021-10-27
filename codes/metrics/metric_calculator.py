@@ -89,19 +89,17 @@ class MetricCalculator():
 
     @master_only
     def display_results(self):
-        logger = base_utils.get_logger('base')
-
         # per sequence results
         for seq, metric_dict_per_seq in self.metric_dict.items():
-            logger.info('Sequence: {}'.format(seq))
+            base_utils.log_info(f'Sequence: {seq}')
             for metric_type in self.metric_opt.keys():
-                logger.info('\t{}: {:.6f}'.format(
-                    metric_type, np.mean(metric_dict_per_seq[metric_type])))
+                avg_res = np.mean(metric_dict_per_seq[metric_type])
+                base_utils.log_info(f'\t{metric_type}: {avg_res:.6f}')
 
         # average results
-        logger.info('Average')
+        base_utils.log_info('Average')
         for metric_type, avg_result in self.metric_avg_dict.items():
-            logger.info('\t{}: {:.6f}'.format(metric_type, avg_result.item()))
+            base_utils.log_info(f'\t{metric_type}: {avg_result.item():.6f}')
 
     @master_only
     def save_results(self, model_idx, save_path, override=False):

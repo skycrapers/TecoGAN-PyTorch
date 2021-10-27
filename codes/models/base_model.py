@@ -14,7 +14,6 @@ from utils.dist_utils import master_only
 class BaseModel():
     def __init__(self, opt):
         self.opt = opt
-        self.verbose = opt['verbose']
         self.scale = opt['scale']
         self.device = torch.device(opt['device'])
         self.blur_kernel = None
@@ -29,9 +28,6 @@ class BaseModel():
             self.running_log_dict = OrderedDict()
 
     def set_networks(self):
-        pass
-
-    def config_training(self):
         pass
 
     def set_criterions(self):

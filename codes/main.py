@@ -114,16 +114,15 @@ def train(opt):
                             data['seq_idx'], true_seq_dir, '', pred_seq=hr_seq)
 
                     # save/print results
+                    metric_calculator.get_averaged_results(num_seq)
                     if opt['test'].get('save_json'):
                         # write to a json file
                         json_path = osp.join(
-                            opt['test']['json_dir'], '{}_avg.json'.format(ds_name))
-                        metric_calculator.get_averaged_results(num_seq)
+                            opt['test']['json_dir'], f'{ds_name}_avg.json')
                         metric_calculator.save_results(
                             model_idx, json_path, override=True)
                     else:
                         # print directly
-                        metric_calculator.get_averaged_results(num_seq)
                         metric_calculator.display_results()
 
 
