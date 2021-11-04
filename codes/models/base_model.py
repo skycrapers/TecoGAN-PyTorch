@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 
-from utils.data_utils import create_kernel
+from utils.data_utils import create_kernel, downsample_bd
 from utils.dist_utils import master_only
 
 
@@ -39,56 +39,92 @@ class BaseModel():
     def set_lr_schedules(self):
         pass
 
-    def prepare_data(self, data):
+    def prepare_training_data(self, data):
         """ prepare gt, lr data for training
 
-            for BD degradation, generate lr data and remove border of gt data
-            for BI degradation, use the input data directly
-
+            for BD degradation, generate lr data and remove the border of gt data
+            for BI degradation, use input data directly
         """
 
         degradation_type = self.opt['dataset']['degradation']['type']
 
         if degradation_type == 'BI':
-            self.lr_data = data['lr'].to(self.device)
             self.gt_data = data['gt'].to(self.device)
+            self.lr_data = data['lr'].to(self.device)
 
         elif degradation_type == 'BD':
-            # generate lr data on the fly
+            # generate lr data on the fly (on gpu)
 
             # set params
             scale = self.opt['scale']
             sigma = self.opt['dataset']['degradation'].get('sigma', 1.5)
-            border_size = int(sigma*3.0)
+            border_size = int(sigma * 3.0)
 
-            gt_with_border = data['gt'].to(self.device)
-            n, t, c, gt_h, gt_w = gt_with_border.size()
+            gt_data = data['gt'].to(self.device)  # with border
+            n, t, c, gt_h, gt_w = gt_data.size()
             lr_h = (gt_h - 2*border_size)//scale
             lr_w = (gt_w - 2*border_size)//scale
 
             # create blurring kernel
             if self.blur_kernel is None:
                 self.blur_kernel = create_kernel(sigma).to(self.device)
+            blur_kernel = self.blur_kernel
 
             # generate lr data
-            gt_with_border = gt_with_border.view(n*t, c, gt_h, gt_w)
-            lr_data = F.conv2d(
-                gt_with_border, self.blur_kernel, stride=scale, bias=None,
-                padding=0)
-            self.lr_data = lr_data.view(n, t, c, lr_h, lr_w)
+            gt_data = gt_data.view(n*t, c, gt_h, gt_w)
+            lr_data = downsample_bd(gt_data, blur_kernel, scale, pad_data=False)
+            lr_data = lr_data.view(n, t, c, lr_h, lr_w)
 
             # remove gt border
-            gt_data = gt_with_border[
+            gt_data = gt_data[
                 ...,
                 border_size: border_size + scale*lr_h,
-                border_size: border_size + scale*lr_w
-            ]
-            self.gt_data = gt_data.view(n, t, c, scale*lr_h, scale*lr_w)
+                border_size: border_size + scale*lr_w]
+            gt_data = gt_data.view(n, t, c, scale*lr_h, scale*lr_w)
+
+            self.gt_data, self.lr_data = gt_data, lr_data  # tchw|float32
+
+    def prepare_inference_data(self, data):
+        """ Prepare lr data for training (w/o loading on device)
+        """
+
+        degradation_type = self.opt['dataset']['degradation']['type']
+
+        if degradation_type == 'BI':
+            self.lr_data = data['lr']
+
+        elif degradation_type == 'BD':
+            if 'lr' in data:
+                self.lr_data = data['lr']
+            else:
+                # generate lr data on the fly (on cpu)
+                # TODO: do frame-wise downsampling on gpu for acceleration?
+                gt_data = data['gt']  # thwc|uint8
+
+                # set params
+                scale = self.opt['scale']
+                sigma = self.opt['dataset']['degradation'].get('sigma', 1.5)
+
+                # create blurring kernel
+                if self.blur_kernel is None:
+                    self.blur_kernel = create_kernel(sigma)
+                blur_kernel = self.blur_kernel.cpu()
+
+                # generate lr data
+                gt_data = gt_data.permute(0, 3, 1, 2).float()  / 255.0  # tchw|float32
+                lr_data = downsample_bd(
+                    gt_data, blur_kernel, scale, pad_data=True)
+                lr_data = lr_data.permute(0, 2, 3, 1)  # thwc|float32
+
+                self.lr_data = lr_data
+
+        # thwc to tchw
+        self.lr_data = self.lr_data.permute(0, 3, 1, 2)  # tchw|float32
 
     def train(self):
         pass
 
-    def infer(self, data):
+    def infer(self):
         pass
 
     def model_to_device(self, net):
@@ -106,7 +142,7 @@ class BaseModel():
         if hasattr(self, 'sched_D') and self.sched_D is not None:
             self.sched_D.step()
 
-    def get_current_learning_rate(self):
+    def get_learning_rate(self):
         lr_dict = OrderedDict()
 
         if hasattr(self, 'optim_G'):
@@ -116,19 +152,6 @@ class BaseModel():
             lr_dict['lr_D'] = self.optim_D.param_groups[0]['lr']
 
         return lr_dict
-
-    def update_running_log(self):
-        d = self.log_decay
-        for k in self.log_dict.keys():
-            current_val = self.log_dict[k]
-            running_val = self.running_log_dict.get(k)
-
-            if running_val is None:
-                running_val = current_val
-            else:
-                running_val = d * running_val + (1.0 - d) * current_val
-
-            self.running_log_dict[k] = running_val
 
     def reduce_log(self):
         if self.dist:
@@ -144,6 +167,21 @@ class BaseModel():
                     vals /= world_size
                 self.log_dict = {key: val.item() for key, val in zip(keys, vals)}
 
+    def update_running_log(self):
+        self.reduce_log()  # for distributed training
+
+        d = self.log_decay
+        for k in self.log_dict.keys():
+            current_val = self.log_dict[k]
+            running_val = self.running_log_dict.get(k)
+
+            if running_val is None:
+                running_val = current_val
+            else:
+                running_val = d * running_val + (1.0 - d) * current_val
+
+            self.running_log_dict[k] = running_val
+
     def get_current_log(self):
         return self.log_dict
 
@@ -153,7 +191,7 @@ class BaseModel():
     def get_format_msg(self, epoch, iter):
         # generic info
         msg = f'[epoch: {epoch} | iter: {iter}'
-        for lr_type, lr in self.get_current_learning_rate().items():
+        for lr_type, lr in self.get_learning_rate().items():
             msg += f' | {lr_type}: {lr:.2e}'
         msg += '] '
 

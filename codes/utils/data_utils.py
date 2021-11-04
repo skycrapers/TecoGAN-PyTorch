@@ -27,6 +27,32 @@ def create_kernel(sigma, ksize=None):
     return kernel
 
 
+def downsample_bd(data, kernel, scale, pad_data):
+    """
+        Note:
+            1. `data` should be torch.FloatTensor (data range 0~1) in shape [nchw]
+            2. `pad_data` should be enabled in model testing
+            3. This function is device agnostic, i.e., data/kernel could be on cpu or gpu
+    """
+
+    if pad_data:
+        # compute padding params
+        kernel_h, kernel_w = kernel.shape[-2:]
+        pad_h, pad_w = kernel_h - 1, kernel_w - 1
+        pad_t = pad_h // 2
+        pad_b = pad_h - pad_t
+        pad_l = pad_w // 2
+        pad_r = pad_w - pad_l
+
+        # pad data
+        data = F.pad(data, (pad_l, pad_r, pad_t, pad_b), 'reflect')
+
+    # blur + down sample
+    data = F.conv2d(data, kernel, stride=scale, bias=None, padding=0)
+
+    return data
+
+
 def rgb_to_ycbcr(img):
     """ Coefficients are taken from the  official codes of DUF-VSR
         This conversion is also the same as that in BasicSR

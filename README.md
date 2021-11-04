@@ -16,8 +16,9 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 
 
 ### Updates
-- 2021.10: Supported model training & testing on the [REDS](https://seungjunnah.github.io/Datasets/reds.html) dataset.
-- 2021.07: Upgraded codebase, now support multi-GPU training & testing.
+- 11/2021: Supported 2x SR.
+- 10/2021: Supported model training/testing on the [REDS](https://seungjunnah.github.io/Datasets/reds.html) dataset.
+- 07/2021: Upgraded codebase to support multi-GPU training & testing.
 
 
 

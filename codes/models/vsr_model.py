@@ -65,7 +65,7 @@ class VSRModel(BaseModel):
 
         # === forward net_G === #
         net_G_output_dict = self.net_G(self.lr_data)
-        hr_data = net_G_output_dict['hr_data']
+        self.hr_data = net_G_output_dict['hr_data']
 
         # === optimize net_G === #
         loss_G = 0
@@ -73,7 +73,7 @@ class VSRModel(BaseModel):
 
         # pixel loss
         pix_w = self.opt['train']['pixel_crit'].get('weight', 1.0)
-        loss_pix_G = pix_w * self.pix_crit(hr_data, self.gt_data)
+        loss_pix_G = pix_w * self.pix_crit(self.hr_data, self.gt_data)
         loss_G += loss_pix_G
         self.log_dict['l_pix_G'] = loss_pix_G.item()
 
@@ -94,16 +94,13 @@ class VSRModel(BaseModel):
         loss_G.backward()
         self.optim_G.step()
 
-    def infer(self, lr_data):
-        """
-            Parameters:
-                :param lr_data: video sequence in shape [thwc]
-                :return: video sequence in type [uint8] and shape [thwc]
+    def infer(self):
+        """ Infer the `lr_data` sequence
+
+            :return: np.ndarray sequence in type [uint8] and shape [thwc]
         """
 
-        # canonicalize
-        lr_data = data_utils.canonicalize(lr_data)  # to torch.FloatTensor
-        lr_data = lr_data.permute(0, 3, 1, 2)  # tchw
+        lr_data = self.lr_data
 
         # temporal padding
         lr_data, n_pad_front = self.pad_sequence(lr_data)

@@ -29,8 +29,8 @@ class MetricCalculator():
         # initialize
         self.metric_opt = opt['metric']
         self.device = torch.device(opt['device'])
-        self.rank = opt['rank']
         self.dist = opt['dist']
+        self.rank = opt['rank']
 
         self.psnr_colorspace = ''
         self.dm = None
@@ -56,6 +56,7 @@ class MetricCalculator():
     def reset(self):
         self.reset_per_sequence()
         self.metric_dict = OrderedDict()
+        self.avg_metric_dict = OrderedDict()
 
     def reset_per_sequence(self):
         self.seq_idx_curr = ''
@@ -64,48 +65,87 @@ class MetricCalculator():
         self.true_img_pre = None
         self.pred_img_pre = None
 
-    def get_averaged_results(self, num_seq):
-        self.metric_avg_dict = {
-            metric_type: torch.zeros(1, dtype=torch.float32, device=self.device)
-            for metric_type in self.metric_opt.keys()
+    def gather(self, seq_idx_lst):
+        """ Gather results from all devices.
+            Results will be updated into self.metric_dict on device 0
+        """
+
+        # mdict
+        # {
+        #     'seq_idx': {
+        #         'metric1': [frm1, frm2, ...],
+        #         'metric2': [frm1, frm2, ...]
+        #     }
+        # }
+        mdict = self.metric_dict
+
+        mtype_lst = self.metric_opt.keys()
+        n_metric = len(mtype_lst)
+
+        # avg_mdict
+        # {
+        #     'seq_idx': torch.tensor([metric1_avg, metric2_avg, ...])
+        # }
+        avg_mdict = {
+            seq_idx: torch.zeros(n_metric, dtype=torch.float32, device=self.device)
+            for seq_idx in seq_idx_lst
         }
 
-        for metric_type in self.metric_opt.keys():
-            metric_avg_per_seq = []
-            for seq, metric_dict_per_seq in self.metric_dict.items():
-                metric_avg_per_seq.append(
-                    np.mean(metric_dict_per_seq[metric_type]))
-            self.metric_avg_dict[metric_type] += np.sum(metric_avg_per_seq)
+        # average metric results for each sequence
+        for i, mtype in enumerate(mtype_lst):
+            for seq_idx, mdict_per_seq in mdict.items():  # ordered
+                avg_mdict[seq_idx][i] += np.mean(mdict_per_seq[mtype])
 
-        # collect results from all devices
         if self.dist:
-            for _, tensor in self.metric_avg_dict.items():
+            for seq_idx, tensor in avg_mdict.items():
                 dist.reduce(tensor, dst=0)
             dist.barrier()
 
-        # average results of all seq
-        for metric in self.metric_avg_dict.keys():
-            self.metric_avg_dict[metric] /= num_seq
+        if self.rank == 0:
+            # avg_metric_dict
+            # {
+            #     'seq_idx': {
+            #         'metric1': avg,
+            #         'metric2': avg
+            #     }
+            # }
 
-    def display_results(self):
+            for seq_idx in seq_idx_lst:
+                self.avg_metric_dict[seq_idx] = OrderedDict([
+                    (mtype, avg_mdict[seq_idx][i].item())
+                    for i, mtype in enumerate(mtype_lst)
+                ])
+
+    def average(self):
+        """ Return a dict including metric results averaged over all sequence
+        """
+
+        metric_avg_dict = OrderedDict()
+        for mtype in self.metric_opt.keys():
+            metric_all_seq = []
+            for sqe_idx, mdict_per_seq in self.avg_metric_dict.items():
+                metric_all_seq.append(mdict_per_seq[mtype])
+
+            metric_avg_dict[mtype] = np.mean(metric_all_seq)
+
+        return metric_avg_dict
+
+    @master_only
+    def display(self):
         # per sequence results
-        for seq, metric_dict_per_seq in self.metric_dict.items():
-            print(f'Sequence: {seq}')
-            for metric_type in self.metric_opt.keys():
-                avg_res = np.mean(metric_dict_per_seq[metric_type])
-                print(f'\t{metric_type}: {avg_res:.6f}')
+        for seq_idx, mdict_per_seq in self.avg_metric_dict.items():
+            base_utils.log_info(f'Sequence: {seq_idx}')
+            for mtype in self.metric_opt.keys():
+                base_utils.log_info(f'\t{mtype}: {mdict_per_seq[mtype]:.6f}')
 
-        self.display_average_results()
-
-    @master_only
-    def display_average_results(self):
         # average results
-        print('Average')
-        for metric_type, avg_result in self.metric_avg_dict.items():
-            print(f'\t{metric_type}: {avg_result.item():.6f}')
+        base_utils.log_info('Average')
+        metric_avg_dict = self.average()
+        for mtype, value in metric_avg_dict.items():
+            base_utils.log_info(f'\t{mtype}: {value:.6f}')
 
     @master_only
-    def save_results(self, model_idx, save_path, override=False):
+    def save(self, model_idx, save_path, average=True, override=False):
         # load previous results if existed
         if osp.exists(save_path):
             with open(save_path, 'r') as f:
@@ -113,16 +153,20 @@ class MetricCalculator():
         else:
             json_dict = dict()
 
-        # merge (averaged) results
+        # update
         if model_idx not in json_dict:
-            json_dict[model_idx] = dict()
+            json_dict[model_idx] = OrderedDict()
 
-        for metric_type, avg_result in self.metric_avg_dict.items():
-            # override or skip
-            if metric_type in json_dict[model_idx] and not override:
-                continue
-
-            json_dict[model_idx][metric_type] = f'{avg_result.item():.6f}'
+        if average:
+            metric_avg_dict = self.average()
+            for mtype, value in metric_avg_dict.items():
+                # override or skip
+                if mtype in json_dict[model_idx] and not override:
+                    continue
+                json_dict[model_idx][mtype] = f'{value:.6f}'
+        else:
+            # TODO: save results of each sequence
+            raise NotImplementedError()
 
         # sort
         json_dict = OrderedDict(sorted(
@@ -132,28 +176,20 @@ class MetricCalculator():
         with open(save_path, 'w') as f:
             json.dump(json_dict, f, sort_keys=False, indent=4)
 
-    def compute_sequence_metrics(self, seq, true_seq_dir, pred_seq_dir,
-                                 pred_seq=None):
+    def compute_sequence_metrics(self, seq_idx, true_seq, pred_seq):
         # clear
         self.reset_per_sequence()
 
         # initialize metric_dict for the current sequence
-        self.seq_idx_curr = seq
+        self.seq_idx_curr = seq_idx
         self.metric_dict[self.seq_idx_curr] = OrderedDict({
             metric: [] for metric in self.metric_opt.keys()})
 
-        # retrieve files
-        true_img_lst = base_utils.retrieve_files(true_seq_dir, 'png')
-        pred_img_lst = base_utils.retrieve_files(pred_seq_dir, 'png')
-
         # compute metrics for each frame
-        for i in range(len(true_img_lst)):
-            self.true_img_cur = cv2.imread(true_img_lst[i])[..., ::-1]  # bgr2rgb
-            # use a given pred_seq or load from disk
-            if pred_seq is not None:
-                self.pred_img_cur = pred_seq[i]  # hwc|rgb|uint8
-            else:
-                self.pred_img_cur = cv2.imread(pred_img_lst[i])[..., ::-1]
+        tot_frm = true_seq.shape[0]
+        for i in range(tot_frm):
+            self.true_img_cur = true_seq[i]  # hwc|rgb/y|uint8
+            self.pred_img_cur = pred_seq[i]
 
             # pred_img and true_img may have different sizes
             # crop the larger one to match the smaller one
@@ -180,7 +216,7 @@ class MetricCalculator():
                 metric_dict['PSNR'].append(PSNR)
 
             elif metric_type == 'LPIPS':
-                LPIPS = self.compute_LPIPS()[0, 0, 0, 0].cpu().numpy()
+                LPIPS = self.compute_LPIPS()[0, 0, 0, 0].item()
                 metric_dict['LPIPS'].append(LPIPS)
 
             elif metric_type == 'tOF':

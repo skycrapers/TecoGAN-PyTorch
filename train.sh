@@ -9,6 +9,8 @@ model=$2
 gpu_ids=0,1  # set to -1 to use cpu
 master_port=4321
 
+debug=0
+
 
 # retain training or train from scratch
 start_iter=0
@@ -26,11 +28,14 @@ if [ -d "$exp_dir/train" ]; then
     echo ">> Please delete it for retraining"
   	exit 1
 fi
+# make dir
+mkdir -p ${exp_dir}/train
 
 
 # backup codes
-mkdir -p ${exp_dir}/train
-cp -r ${root_dir}/codes ${exp_dir}/train/codes_backup${suffix}
+if [[ ${debug} > 0 ]]; then
+    cp -r ${root_dir}/codes ${exp_dir}/train/codes_backup${suffix}
+fi
 
 
 # run

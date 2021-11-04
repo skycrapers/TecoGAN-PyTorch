@@ -33,7 +33,7 @@ def initialize_weights(net_l, init_type='kaiming', scale=1):
                 nn.init.constant_(m.bias.data, 0)
 
 
-def space_to_depth(x, scale=4):
+def space_to_depth(x, scale):
     """ Equivalent to tf.space_to_depth()
     """
 
@@ -72,8 +72,7 @@ def backward_warp(x, flow, mode='bilinear', padding_mode='border'):
     grid = (grid + flow).permute(0, 2, 3, 1)
 
     # bilinear sampling
-    # Note: `align_corners` is set to `True` by default in PyTorch version
-    #        lower than 1.4.0
+    # Note: `align_corners` is set to `True` by default for PyTorch version < 1.4.0
     if int(''.join(torch.__version__.split('.')[:2])) >= 14:
         output = F.grid_sample(
             x, grid, mode=mode, padding_mode=padding_mode, align_corners=True)
@@ -90,21 +89,21 @@ def get_upsampling_func(scale=4, degradation='BI'):
             align_corners=False)
 
     elif degradation == 'BD':
-        upsample_func = BicubicUpsample(scale_factor=scale)
+        upsample_func = BicubicUpsampler(scale_factor=scale)
 
     else:
-        raise ValueError('Unrecognized degradation: {}'.format(degradation))
+        raise ValueError(f'Unrecognized degradation type: {degradation}')
 
     return upsample_func
 
 
 # --------------------- utility classes --------------------- #
-class BicubicUpsample(nn.Module):
+class BicubicUpsampler(nn.Module):
     """ Bicubic upsampling function with similar behavior to that in TecoGAN-Tensorflow
 
         Note:
             This function is different from torch.nn.functional.interpolate and matlab's imresize
-            in terms of the bicubic kernel and the sampling strategy.
+            in terms of the bicubic kernel and the sampling strategy
 
         References:
             http://verona.fi-p.unam.mx/boris/practicas/CubConvInterp.pdf
@@ -112,7 +111,7 @@ class BicubicUpsample(nn.Module):
     """
 
     def __init__(self, scale_factor, a=-0.75):
-        super(BicubicUpsample, self).__init__()
+        super(BicubicUpsampler, self).__init__()
 
         # calculate weights (according to Eq.(6) in the reference paper)
         cubic = torch.FloatTensor([
@@ -155,4 +154,3 @@ class BicubicUpsample(nn.Module):
         output = output.reshape(n, c, f*h, f*w)
 
         return output
-

@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 
@@ -76,7 +75,8 @@ def create_dataloader(opt, phase, idx):
                 pin_memory=data_opt['pin_memory'])
 
         else:
-            assert degradation_type == 'BD', 'lr_seq_dir is required for BI mode'
+            assert degradation_type == 'BD', \
+                '"lr_seq_dir" is required for BI mode'
 
             sigma = opt['dataset']['degradation']['sigma']
             ksize = 2 * int(sigma * 3.0) + 1

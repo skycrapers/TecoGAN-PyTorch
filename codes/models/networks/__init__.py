@@ -14,8 +14,7 @@ def define_generator(opt):
             scale=opt['scale'])
 
     else:
-        raise ValueError('Unrecognized generator: {}'.format(
-            net_G_opt['name']))
+        raise ValueError(f'Unrecognized generator: {net_G_opt["name"]}')
 
     return net_G
 
@@ -27,7 +26,6 @@ def define_discriminator(opt):
         spatial_size = opt['dataset']['train']['crop_size']
     else:  # BI
         spatial_size = opt['dataset']['train']['gt_crop_size']
-
 
     if net_D_opt['name'].lower() == 'stnet':  # spatio-temporal discriminator
         from .tecogan_nets import SpatioTemporalDiscriminator
@@ -44,7 +42,6 @@ def define_discriminator(opt):
             use_cond=net_D_opt['use_cond'])
 
     else:
-        raise ValueError('Unrecognized discriminator: {}'.format(
-            net_D_opt['name']))
+        raise ValueError(f'Unrecognized discriminator: {net_D_opt["name"]}')
 
     return net_D

@@ -7,8 +7,7 @@ import torch
 
 from data import create_dataloader
 from models import define_model
-from models.networks import define_generator
-from metrics.metric_calculator import MetricCalculator
+from metrics import create_metric_calculator
 from utils import dist_utils, base_utils, data_utils
 
 
@@ -32,8 +31,8 @@ def train(opt):
     log_freq = opt['logger']['log_freq']
     ckpt_freq = opt['logger']['ckpt_freq']
 
-    base_utils.log_info(f'Number of training samples: {total_sample}')
-    base_utils.log_info(f'Total epochs needed: {total_epoch} for {total_iter} iterations')
+    base_utils.log_info(f'Number of the training samples: {total_sample}')
+    base_utils.log_info(f'{total_epoch} epochs needed for {total_iter} iterations')
 
     # train
     for epoch in range(total_epoch):
@@ -46,18 +45,17 @@ def train(opt):
             curr_iter = start_iter + iter
             if iter > total_iter: break
 
-            # update learning rate
-            model.update_learning_rate()
-
             # prepare data
-            model.prepare_data(data)
+            model.prepare_training_data(data)
 
             # train a mini-batch
             model.train()
 
             # update running log
-            model.reduce_log()  # for distributed training
             model.update_running_log()
+
+            # update learning rate
+            model.update_learning_rate()
 
             # print messages
             if log_freq > 0 and curr_iter % log_freq == 0:
@@ -81,25 +79,28 @@ def train(opt):
                     ds_name = opt['dataset'][dataset_idx]['name']
                     base_utils.log_info(f'Testing on {ds_name} dataset')
 
-                    # create metric calculator
-                    metric_calculator = MetricCalculator(opt)
-
                     # create data loader
                     test_loader = create_dataloader(
                         opt, phase='test', idx=dataset_idx)
                     test_dataset = test_loader.dataset
                     num_seq = len(test_dataset)
 
-                    # infer and compute metrics
+                    # create metric calculator
+                    metric_calculator = create_metric_calculator(opt)
+
+                    # infer a sequence
                     rank, world_size = dist_utils.get_dist_info()
-                    for i in range(rank, num_seq, world_size):
+                    for idx in range(rank, num_seq, world_size):
                         # fetch data
-                        data = test_dataset[i]
+                        data = test_dataset[idx]
+
+                        # prepare data
+                        model.prepare_inference_data(data)
 
                         # infer
-                        hr_seq = model.infer(data['lr'])
+                        hr_seq = model.infer()
 
-                        # save hr results (optional)
+                        # save hr results
                         if opt['test']['save_res']:
                             res_dir = osp.join(
                                 opt['test']['res_dir'], ds_name, model_idx)
@@ -108,22 +109,24 @@ def train(opt):
                                 res_seq_dir, hr_seq, data['frm_idx'], to_bgr=True)
 
                         # compute metrics for the current sequence
-                        true_seq_dir = osp.join(
-                            opt['dataset'][dataset_idx]['gt_seq_dir'], data['seq_idx'])
-                        metric_calculator.compute_sequence_metrics(
-                            data['seq_idx'], true_seq_dir, '', pred_seq=hr_seq)
+                        if metric_calculator is not None:
+                            gt_seq = data['gt'].numpy()
+                            metric_calculator.compute_sequence_metrics(
+                                data['seq_idx'], gt_seq, hr_seq)
 
                     # save/print results
-                    metric_calculator.get_averaged_results(num_seq)
-                    if opt['test'].get('save_json'):
-                        # write to a json file
-                        json_path = osp.join(
-                            opt['test']['json_dir'], f'{ds_name}_avg.json')
-                        metric_calculator.save_results(
-                            model_idx, json_path, override=True)
-                    else:
-                        # print directly
-                        metric_calculator.display_results()
+                    if metric_calculator is not None:
+                        seq_idx_lst = [data['seq_idx'] for data in test_dataset]
+                        metric_calculator.gather(seq_idx_lst)
+
+                        if opt['test'].get('save_json'):
+                            # write results to a json file
+                            json_path = osp.join(
+                                opt['test']['json_dir'], f'{ds_name}_avg.json')
+                            metric_calculator.save(model_idx, json_path, override=True)
+                        else:
+                            # print directly
+                            metric_calculator.display()
 
 
 def test(opt):
@@ -134,11 +137,11 @@ def test(opt):
     for load_path in opt['model']['generator']['load_path_lst']:
         # set model index
         model_idx = osp.splitext(osp.split(load_path)[-1])[0]
-        
+
         # log
-        base_utils.log_info(f'{"="*40}')
+        base_utils.log_info(f'{"=" * 40}')
         base_utils.log_info(f'Testing model: {model_idx}')
-        base_utils.log_info(f'{"="*40}')
+        base_utils.log_info(f'{"=" * 40}')
 
         # create model
         opt['model']['generator']['load_path'] = load_path
@@ -156,15 +159,22 @@ def test(opt):
             # create data loader
             test_loader = create_dataloader(opt, phase='test', idx=dataset_idx)
             test_dataset = test_loader.dataset
+            num_seq = len(test_dataset)
 
-            # infer and save results
+            # create metric calculator
+            metric_calculator = create_metric_calculator(opt)
+
+            # infer a sequence
             rank, world_size = dist_utils.get_dist_info()
-            for idx in range(rank, len(test_dataset), world_size):
+            for idx in range(rank, num_seq, world_size):
                 # fetch data
                 data = test_dataset[idx]
 
+                # prepare data
+                model.prepare_inference_data(data)
+
                 # infer
-                hr_seq = model.infer(data['lr'])
+                hr_seq = model.infer()
 
                 # save hr results
                 if opt['test']['save_res']:
@@ -174,7 +184,27 @@ def test(opt):
                     data_utils.save_sequence(
                         res_seq_dir, hr_seq, data['frm_idx'], to_bgr=True)
 
-            base_utils.log_info('-'*40)
+                # compute metrics for the current sequence
+                if metric_calculator is not None:
+                    gt_seq = data['gt'].numpy()
+                    metric_calculator.compute_sequence_metrics(
+                        data['seq_idx'], gt_seq, hr_seq)
+
+            # save/print results
+            if metric_calculator is not None:
+                seq_idx_lst = [data['seq_idx'] for data in test_dataset]
+                metric_calculator.gather(seq_idx_lst)
+
+                if opt['test'].get('save_json'):
+                    # write results to a json file
+                    json_path = osp.join(
+                        opt['test']['json_dir'], f'{ds_name}_avg.json')
+                    metric_calculator.save(model_idx, json_path, override=True)
+                else:
+                    # print directly
+                    metric_calculator.display()
+
+            base_utils.log_info('-' * 40)
 
 
 def profile(opt, lr_size, test_speed=False):
@@ -194,6 +224,7 @@ def profile(opt, lr_size, test_speed=False):
     msg += f'{"*"*40}\nResolution: {lr_size} -> {hr_size} ({scale}x SR)'
 
     # create model
+    from models.networks import define_generator
     net_G = define_generator(opt).to(device)
     # base_utils.log_info(f'\n{net_G.__str__()}')
 

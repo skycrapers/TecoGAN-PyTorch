@@ -104,8 +104,7 @@ class SRNet(nn.Module):
     """ Reconstruction & Upsampling network
     """
 
-    def __init__(self, in_nc=3, out_nc=3, nf=64, nb=16, upsample_func=None,
-                 scale=4):
+    def __init__(self, in_nc, out_nc, nf, nb, upsample_func, scale):
         super(SRNet, self).__init__()
 
         # input conv.
@@ -116,12 +115,17 @@ class SRNet(nn.Module):
         # residual blocks
         self.resblocks = nn.Sequential(*[ResidualBlock(nf) for _ in range(nb)])
 
-        # upsampling
-        self.conv_up = nn.Sequential(
+        # upsampling blocks
+        conv_up = [
             nn.ConvTranspose2d(nf, nf, 3, 2, 1, output_padding=1, bias=True),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(nf, nf, 3, 2, 1, output_padding=1, bias=True),
-            nn.ReLU(inplace=True))
+            nn.ReLU(inplace=True)]
+
+        if scale == 4:
+            conv_up += [
+                nn.ConvTranspose2d(nf, nf, 3, 2, 1, output_padding=1, bias=True),
+                nn.ReLU(inplace=True)]
+
+        self.conv_up = nn.Sequential(*conv_up)
 
         # output conv.
         self.conv_out = nn.Conv2d(nf, out_nc, 3, 1, 1, bias=True)
@@ -131,7 +135,7 @@ class SRNet(nn.Module):
 
     def forward(self, lr_curr, hr_prev_tran):
         """ lr_curr: the current lr data in shape nchw
-            hr_prev_tran: the previous transformed hr_data in shape n(4*4*c)hw
+            hr_prev_tran: the previous transformed hr_data in shape n(s*s*c)hw
         """
 
         out = self.conv_in(torch.cat([lr_curr, hr_prev_tran], dim=1))
@@ -147,8 +151,7 @@ class FRNet(BaseSequenceGenerator):
     """ Frame-recurrent network: https://arxiv.org/abs/1801.04590
     """
 
-    def __init__(self, in_nc=3, out_nc=3, nf=64, nb=16, degradation='BI',
-                 scale=4):
+    def __init__(self, in_nc, out_nc, nf, nb, degradation, scale):
         super(FRNet, self).__init__()
 
         self.scale = scale
@@ -158,7 +161,7 @@ class FRNet(BaseSequenceGenerator):
 
         # define fnet & srnet
         self.fnet = FNet(in_nc)
-        self.srnet = SRNet(in_nc, out_nc, nf, nb, self.upsample_func)
+        self.srnet = SRNet(in_nc, out_nc, nf, nb, self.upsample_func, self.scale)
 
     def forward(self, lr_data, device=None):
         if self.training:
@@ -226,7 +229,7 @@ class FRNet(BaseSequenceGenerator):
             Parameters:
                 :param lr_curr: the current lr data in shape nchw
                 :param lr_prev: the previous lr data in shape nchw
-                :param hr_prev: the previous hr data in shape nc(4h)(4w)
+                :param hr_prev: the previous hr data in shape nc(sh)(sw)
         """
 
         # estimate lr flow (lr_curr -> lr_prev)
@@ -238,7 +241,7 @@ class FRNet(BaseSequenceGenerator):
         lr_flow_pad = F.pad(lr_flow, (0, pad_w, 0, pad_h), 'reflect')
 
         # upsample lr flow
-        hr_flow = self.scale*self.upsample_func(lr_flow_pad)
+        hr_flow = self.scale * self.upsample_func(lr_flow_pad)
 
         # warp hr_prev
         hr_prev_warp = backward_warp(hr_prev, hr_flow)
@@ -273,7 +276,6 @@ class FRNet(BaseSequenceGenerator):
                 lr_prev, hr_prev = lr_curr, hr_curr
 
                 hr_frm = hr_curr.squeeze(0).cpu().numpy()  # chw|rgb|uint8
-
                 hr_seq.append(float32_to_uint8(hr_frm))
 
         return np.stack(hr_seq).transpose(0, 2, 3, 1)  # thwc
@@ -304,7 +306,7 @@ class FRNet(BaseSequenceGenerator):
         pad_h = lr_curr.size(2) - lr_curr.size(2)//8*8
         pad_w = lr_curr.size(3) - lr_curr.size(3)//8*8
         lr_flow_pad = F.pad(lr_flow, (0, pad_w, 0, pad_h), 'reflect')
-        hr_flow = self.scale*self.upsample_func(lr_flow_pad)
+        hr_flow = self.scale * self.upsample_func(lr_flow_pad)
         hr_prev_warp = backward_warp(hr_prev, hr_flow)
         _ = register(self.srnet, [lr_curr, space_to_depth(hr_prev_warp, self.scale)])
         gflops_dict['SRNet'], params_dict['SRNet'] = parse_model_info(self.srnet)
@@ -351,8 +353,7 @@ class SpatioTemporalDiscriminator(BaseSequenceDiscriminator):
     """ Spatio-Temporal discriminator proposed in TecoGAN
     """
 
-    def __init__(self, in_nc=3, spatial_size=128, tempo_range=3,
-                 degradation='BI', scale=4):
+    def __init__(self, in_nc, spatial_size, tempo_range, degradation, scale):
         super(SpatioTemporalDiscriminator, self).__init__()
 
         # basic settings
@@ -480,7 +481,7 @@ class SpatialDiscriminator(BaseSequenceDiscriminator):
     """ Spatial discriminator
     """
 
-    def __init__(self, in_nc=3, spatial_size=128, use_cond=False):
+    def __init__(self, in_nc, spatial_size, use_cond):
         super(SpatialDiscriminator, self).__init__()
 
         # basic settings

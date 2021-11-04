@@ -97,7 +97,7 @@ class UnpairedLMDBDataset(BaseDataset):
 
         h, w = frms.shape[-2:]
         assert (csz <= h) and (csz <= w), \
-            'the crop size is larger than the image size'
+            f'The crop size is larger than the image size ({csz} vs. h{h}/w{w})'
 
         # crop
         top = random.randint(0, h - csz)
