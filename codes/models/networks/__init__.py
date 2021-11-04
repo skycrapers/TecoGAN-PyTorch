@@ -1,10 +1,10 @@
+from .tecogan_nets import FRNet, SpatioTemporalDiscriminator, SpatialDiscriminator
 
 
 def define_generator(opt):
     net_G_opt = opt['model']['generator']
 
     if net_G_opt['name'].lower() == 'frnet':  # frame-recurrent generator
-        from .tecogan_nets import FRNet
         net_G = FRNet(
             in_nc=net_G_opt['in_nc'],
             out_nc=net_G_opt['out_nc'],
@@ -28,14 +28,14 @@ def define_discriminator(opt):
         spatial_size = opt['dataset']['train']['gt_crop_size']
 
     if net_D_opt['name'].lower() == 'stnet':  # spatio-temporal discriminator
-        from .tecogan_nets import SpatioTemporalDiscriminator
         net_D = SpatioTemporalDiscriminator(
             in_nc=net_D_opt['in_nc'],
             spatial_size=spatial_size,
-            tempo_range=net_D_opt['tempo_range'])
+            tempo_range=net_D_opt['tempo_range'],
+            degradation=opt['dataset']['degradation']['type'],
+            scale=opt['scale'])
 
     elif net_D_opt['name'].lower() == 'snet':  # spatial discriminator
-        from .tecogan_nets import SpatialDiscriminator
         net_D = SpatialDiscriminator(
             in_nc=net_D_opt['in_nc'],
             spatial_size=spatial_size,

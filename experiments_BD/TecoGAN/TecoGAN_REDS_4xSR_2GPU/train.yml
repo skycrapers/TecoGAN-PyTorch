@@ -40,7 +40,7 @@ model:
     nf: 64
     nb: 10
 
-    load_path: experiments_BD/FRVSR/FRVSR_REDS/train/ckpt/G_iter400000.pth
+    load_path: experiments_BD/FRVSR/FRVSR_REDS_4xSR_2GPU/train/ckpt/G_iter400000.pth
 
   discriminator:
     name: STNet  # spatio-temporal network
