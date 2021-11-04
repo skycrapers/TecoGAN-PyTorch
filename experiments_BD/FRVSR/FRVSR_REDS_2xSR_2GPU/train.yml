@@ -1,0 +1,104 @@
+# basic configs
+scale: 2
+manual_seed: 0
+verbose: true
+
+
+# dataset configs
+dataset:
+  degradation:
+    type: BD
+    sigma: 1.5
+
+  train:
+    name: REDS
+    seq_dir: data/REDS/GT.lmdb
+    filter_file: data/meta/REDS/train_list.txt
+    data_type: rgb
+    crop_size: 128
+    batch_size_per_gpu: 2
+    num_worker_per_gpu: 3
+    pin_memory: true
+
+  test:
+    name: REDS
+    gt_seq_dir: data/REDS/Raw
+    lr_seq_dir: ~
+    filter_list: ['000', '011', '015', '020']
+    num_worker_per_gpu: 4
+    pin_memory: true
+
+
+# model configs
+model:
+  name: FRVSR
+
+  generator:
+    name: FRNet  # frame-recurrent network
+    in_nc: 3
+    out_nc: 3
+    nf: 64
+    nb: 10
+
+    load_path: ~
+
+
+# training settings
+train:
+  tempo_extent: 10
+
+  start_iter: 0
+  total_iter: 400000
+
+  # configs for generator
+  generator:
+    lr: !!float 1e-4
+    lr_schedule:
+      type: MultiStepLR
+      milestones: [150000, 300000]
+      gamma: 0.5
+    betas: [0.9, 0.999]
+
+  # other settings
+  moving_first_frame: true
+  moving_factor: 0.7
+
+  # criterions
+  pixel_crit:
+    type: CB
+    weight: 1
+    reduction: mean
+
+  warping_crit:
+    type: CB
+    weight: 1
+    reduction: mean
+
+
+# validation configs
+test:
+  test_freq: 10000
+
+  # whether to save the generated SR results
+  save_res: false
+  res_dir: ~   # use default dir
+
+  # whether to save the test results in a json file
+  save_json: true
+  json_dir: ~  # use default dir
+
+  padding_mode: reflect
+  num_pad_front: 5
+
+
+# metric configs
+metric:
+  PSNR:
+    colorspace: y
+
+
+# logger configs
+logger:
+  log_freq: 100
+  decay: 0.99
+  ckpt_freq: 10000
