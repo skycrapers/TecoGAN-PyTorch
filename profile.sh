@@ -15,7 +15,7 @@ lr_size=$3
 python ${root_dir}/codes/main.py \
   --exp_dir ${root_dir}/experiments_${degradation}/${model} \
   --mode profile \
-  --opt train.yml \
+  --opt test.yml \
   --gpu_ids ${gpu_ids} \
   --lr_size ${lr_size} \
   --test_speed

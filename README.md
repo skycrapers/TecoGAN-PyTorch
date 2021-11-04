@@ -86,9 +86,9 @@ bash ./scripts/download/download_models.sh BD TecoGAN
 ```
 > You can download the model from [[BD](https://drive.google.com/file/d/13FPxKE6q7tuRrfhTE7GB040jBeURBj58/view?usp=sharing)] or [[BI](https://drive.google.com/file/d/1ie1F7wJcO4mhNWK8nPX7F0LgOoPzCwEu/view?usp=sharing)], and put it under `./pretrained_models`.
 
-3. Upsample the LR videos by TecoGAN. The results will be saved at `./results`. You can specify which model and how many gpus to be used in `test.sh`.
+3. Run TecoGAN for 4x SR. The results will be saved in `./results`. You can specify which model and how many gpus to be used in `test.sh`.
 ```bash
-bash ./test.sh BD TecoGAN/TecoGAN_VimeoTecoGAN
+bash ./test.sh BD TecoGAN/TecoGAN_VimeoTecoGAN_4xSR_2GPU
 ```
 
 4. Evaluate the upsampled results using the official metrics. These codes are borrowed from [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), with minor modifications to adapt to the BI degradation.
@@ -98,7 +98,7 @@ python ./codes/official_metrics/evaluate.py -m TecoGAN_BD_iter500000
 
 5. Profile model (FLOPs, parameters and speed). You can modify the last argument to specify the size of the LR video.
 ```bash
-bash ./profile.sh BD TecoGAN/TecoGAN_VimeoTecoGAN 3x134x320
+bash ./profile.sh BD TecoGAN/TecoGAN_VimeoTecoGAN_4xSR_2GPU 3x134x320
 ```
 
 ## Training
@@ -138,20 +138,20 @@ python ./scripts/create_lmdb.py --dataset VimeoTecoGAN --raw_dir ./data/VimeoTec
 
 4. Train a FRVSR model first, which can provide a better initialization for the subsequent TecoGAN training. FRVSR has the same generator as TecoGAN, but without perceptual training (GAN and perceptual losses).
 ```bash
-bash ./train.sh BD FRVSR/FRVSR_VimeoTecoGAN
+bash ./train.sh BD FRVSR/FRVSR_VimeoTecoGAN_4xSR_2GPU
 ```
 > You can download and use our pre-trained FRVSR models instead of training from scratch. [[BD-VimeoTecoGAN](https://drive.google.com/file/d/11kPVS04a3B3k0SD-mKEpY_Q8WL7KrTIA/view?usp=sharing)] [[BI-VimeoTecoGAN](https://drive.google.com/file/d/1wejMAFwIBde_7sz-H7zwlOCbCvjt3G9L/view?usp=sharing)] [[BD-REDS]()]
 
-When the training of FRVSR is complete, set the generator's `load_path` in `experiments_BD/TecoGAN/TecoGAN_VimeoTecoGAN/train.yml` to the last checkpoint weight of the trained FRVSR model, e.g., `./pretrained_models/FRVSR_BD_iter400000.pth`.
+When the training is complete, set the generator's `load_path` in `experiments_BD/TecoGAN/TecoGAN_VimeoTecoGAN_4xSR_2GPU/train.yml` to the latest checkpoint weight of the FRVSR model, e.g., `./pretrained_models/FRVSR_BD_iter400000.pth`.
 
 5. Train a TecoGAN model. You can specify which gpu to be used in `train.sh`. By default, the training is conducted in the background and the output info will be logged in `./experiments_BD/TecoGAN/TecoGAN_VimeoTecoGAN/train/train.log`.
 ```bash
-bash ./train.sh BD TecoGAN/TecoGAN_VimeoTecoGAN
+bash ./train.sh BD TecoGAN/TecoGAN_VimeoTecoGAN_4xSR_2GPU
 ```
 
 6. Run the following script to monitor the training process and visualize the validation performance.
 ```bash
-python ./scripts/monitor_training.py -dg BD -m TecoGAN/TecoGAN_VimeoTecoGAN -ds Vid4
+python ./scripts/monitor_training.py -dg BD -m TecoGAN/TecoGAN_VimeoTecoGAN_4xSR_2GPU -ds Vid4
 ```
 > Note that the validation results are NOT exactly the same as the testing results mentioned above due to different implementation of the metrics. The differences are caused by croping policy, LPIPS version and some other issues.
 
