@@ -87,28 +87,6 @@ def float32_to_uint8(inputs):
     return np.uint8(np.clip(np.round(inputs * 255), 0, 255))
 
 
-def canonicalize(data):
-    """ Convert data to torch float32 tensor
-
-        Assume the input data has type np.uint8/np.float32 or torch.uint8/torch.float32,
-        and uint8 data ranges in [0, 255] and float32 data ranges in [0, 1]
-    """
-
-    if isinstance(data, np.ndarray):
-        if data.dtype == np.uint8:
-            data = data.astype(np.float32) / 255.0
-        data = torch.from_numpy(np.ascontiguousarray(data))
-
-    elif isinstance(data, torch.Tensor):
-        if data.dtype == torch.uint8:
-            data = data.float() / 255.0
-
-    else:
-        raise NotImplementedError()
-
-    return data
-
-
 def save_sequence(seq_dir, seq_data, frm_idx_lst=None, to_bgr=False):
     """ Save each frame of a sequence to .png image in seq_dir
 

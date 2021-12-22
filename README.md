@@ -140,7 +140,7 @@ python ./scripts/create_lmdb.py --dataset VimeoTecoGAN --raw_dir ./data/VimeoTec
 ```bash
 bash ./train.sh BD FRVSR/FRVSR_VimeoTecoGAN_4xSR_2GPU
 ```
-> You can download and use our pre-trained FRVSR models instead of training from scratch. [[BD-VimeoTecoGAN](https://drive.google.com/file/d/11kPVS04a3B3k0SD-mKEpY_Q8WL7KrTIA/view?usp=sharing)] [[BI-VimeoTecoGAN](https://drive.google.com/file/d/1wejMAFwIBde_7sz-H7zwlOCbCvjt3G9L/view?usp=sharing)] [[BD-REDS]()]
+> You can download and use our pre-trained FRVSR models instead of training from scratch. [[BD-VimeoTecoGAN](https://drive.google.com/file/d/11kPVS04a3B3k0SD-mKEpY_Q8WL7KrTIA/view?usp=sharing)] [[BI-VimeoTecoGAN](https://drive.google.com/file/d/1wejMAFwIBde_7sz-H7zwlOCbCvjt3G9L/view?usp=sharing)] [[BD-REDS](https://drive.google.com/file/d/1YyTwBFF6P9xy6b9UBILF4ornCdmWbDLY/view?usp=sharing)]
 
 When the training is complete, set the generator's `load_path` in `experiments_BD/TecoGAN/TecoGAN_VimeoTecoGAN_4xSR_2GPU/train.yml` to the latest checkpoint weight of the FRVSR model, e.g., `./pretrained_models/FRVSR_BD_iter400000.pth`.
 
