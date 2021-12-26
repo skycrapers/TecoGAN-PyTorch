@@ -34,7 +34,7 @@ model:
     out_nc: 3
     nf: 64
     nb: 10
-    load_path: pretrained_models/FRVSR_BI_iter400000.pth
+    load_path: pretrained_models/FRVSR_4x_BI_Vimeo_iter400K.pth
 
 
 # test configs

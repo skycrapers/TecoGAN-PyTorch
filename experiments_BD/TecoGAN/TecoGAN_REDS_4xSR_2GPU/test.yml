@@ -30,7 +30,7 @@ model:
     nf: 64
     nb: 10
 
-    load_path: experiments_BD/TecoGAN/TecoGAN_REDS/train/ckpt/G_iter500000.pth
+    load_path: pretrained_models/TecoGAN_4x_BD_REDS_iter500K.pth
 
   discriminator:
     name: STNet  # spatio-temporal network

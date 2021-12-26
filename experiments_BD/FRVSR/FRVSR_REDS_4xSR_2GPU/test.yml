@@ -30,7 +30,7 @@ model:
     nf: 64
     nb: 10
 
-    load_path: experiments_BD/FRVSR/FRVSR_REDS/train/ckpt/G_iter400000.pth
+    load_path: pretrained_models/FRVSR_4x_BD_REDS_iter400K.pth
 
 
 # validation configs

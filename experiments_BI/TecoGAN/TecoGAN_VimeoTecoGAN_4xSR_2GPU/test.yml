@@ -34,7 +34,7 @@ model:
     out_nc: 3
     nf: 64
     nb: 10
-    load_path: pretrained_models/TecoGAN_BI_iter500000.pth
+    load_path: pretrained_models/TecoGAN_4x_BI_Vimeo_iter500K.pth
 
 
 # test configs

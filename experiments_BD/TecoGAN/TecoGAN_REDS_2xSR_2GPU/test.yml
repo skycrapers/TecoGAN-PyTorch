@@ -30,7 +30,7 @@ model:
     nf: 64
     nb: 10
 
-    load_path: experiments_BD/TecoGAN/TecoGAN_REDS_2xSR_2GPU/train/ckpt/G_iter500000.pth
+    load_path: pretrained_models/TecoGAN_2x_BD_REDS_iter500K.pth
 
 
 # validation configs

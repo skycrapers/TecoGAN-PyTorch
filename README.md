@@ -93,7 +93,7 @@ bash ./test.sh BD TecoGAN/TecoGAN_VimeoTecoGAN_4xSR_2GPU
 
 4. Evaluate the upsampled results using the official metrics. These codes are borrowed from [TecoGAN-TensorFlow](https://github.com/thunil/TecoGAN), with minor modifications to adapt to the BI degradation.
 ```bash
-python ./codes/official_metrics/evaluate.py -m TecoGAN_BD_iter500000
+python ./codes/official_metrics/evaluate.py -m TecoGAN_4x_BD_Vimeo_iter500K
 ```
 
 5. Profile model (FLOPs, parameters and speed). You can modify the last argument to specify the size of the LR video.
@@ -142,7 +142,7 @@ bash ./train.sh BD FRVSR/FRVSR_VimeoTecoGAN_4xSR_2GPU
 ```
 > You can download and use our pre-trained FRVSR models instead of training from scratch. [[BD-4x-Vimeo](https://drive.google.com/file/d/11kPVS04a3B3k0SD-mKEpY_Q8WL7KrTIA/view?usp=sharing)] [[BI-4x-Vimeo](https://drive.google.com/file/d/1wejMAFwIBde_7sz-H7zwlOCbCvjt3G9L/view?usp=sharing)] [[BD-4x-REDS](https://drive.google.com/file/d/1YyTwBFF6P9xy6b9UBILF4ornCdmWbDLY/view?usp=sharing)][[BD-2x-REDS](https://drive.google.com/file/d/1ibsr3td1rYeKsDc2d-J9-8jFURBFc_ST/view?usp=sharing)]
 
-When the training is complete, set the generator's `load_path` in `experiments_BD/TecoGAN/TecoGAN_VimeoTecoGAN_4xSR_2GPU/train.yml` to the latest checkpoint weight of the FRVSR model, e.g., `./pretrained_models/FRVSR_BD_iter400000.pth`.
+When the training is complete, set the generator's `load_path` in `experiments_BD/TecoGAN/TecoGAN_VimeoTecoGAN_4xSR_2GPU/train.yml` to the latest checkpoint weight of the FRVSR model.
 
 5. Train a TecoGAN model. You can specify which gpu to be used in `train.sh`. By default, the training is conducted in the background and the output info will be logged in `./experiments_BD/TecoGAN/TecoGAN_VimeoTecoGAN/train/train.log`.
 ```bash

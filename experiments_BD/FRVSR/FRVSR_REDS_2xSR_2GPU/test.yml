@@ -30,7 +30,7 @@ model:
     nf: 64
     nb: 10
 
-    load_path: experiments_BD/FRVSR/FRVSR_REDS_2xSR_2GPU/train/ckpt/G_iter200000.pth
+    load_path: pretrained_models/FRVSR_2x_BD_REDS_iter400K.pth
 
 
 # validation configs
