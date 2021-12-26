@@ -1,0 +1,65 @@
+# basic configs
+scale: 2
+manual_seed: 0
+verbose: true
+
+
+# dataset configs
+dataset:
+  degradation:
+    type: BD
+    sigma: 1.5
+
+  test:
+    name: REDS
+    gt_seq_dir: data/REDS/Raw
+    lr_seq_dir: ~
+    filter_list: ['000', '011', '015', '020']
+    num_worker_per_gpu: 4
+    pin_memory: true
+
+
+# model configs
+model:
+  name: TecoGAN
+
+  generator:
+    name: FRNet  # frame-recurrent network
+    in_nc: 3
+    out_nc: 3
+    nf: 64
+    nb: 10
+
+    load_path: experiments_BD/TecoGAN/TecoGAN_REDS_2xSR_2GPU/train/ckpt/G_iter500000.pth
+
+
+# validation configs
+test:
+  test_freq: 10000
+
+  # whether to save the generated SR results
+  save_res: true
+  res_dir: ~   # use default dir
+
+  # whether to save the test results in a json file
+  save_json: false
+  json_dir: ~  # use default dir
+
+  padding_mode: reflect
+  num_pad_front: 5
+
+
+# metric configs
+metric:
+  PSNR:
+    colorspace: y
+
+  LPIPS:
+    model: net-lin
+    net: alex
+    colorspace: rgb
+    spatial: false
+    version: 0.1
+
+  tOF:
+    colorspace: y
