@@ -19,7 +19,7 @@ from tqdm import tqdm
 from IPython import embed
 
 from . import networks_basic as networks
-import models as util
+import codes.models as util
 
 class DistModel(BaseModel):
     def name(self):

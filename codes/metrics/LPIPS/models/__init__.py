@@ -11,7 +11,7 @@ except ImportError:
 import torch
 from torch.autograd import Variable
 
-from metrics.LPIPS.models import dist_model
+from codes.metrics.LPIPS.models import dist_model
 
 
 class PerceptualLoss(torch.nn.Module):

@@ -12,7 +12,7 @@ lr_size=$3
 
 
 # run
-python ${root_dir}/codes/main.py \
+python ${root_dir}/run.py \
   --exp_dir ${root_dir}/experiments_${degradation}/${model} \
   --mode profile \
   --opt test.yml \

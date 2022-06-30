@@ -6,10 +6,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .base_nets import BaseSequenceGenerator, BaseSequenceDiscriminator
-from utils.net_utils import space_to_depth, backward_warp, get_upsampling_func
-from utils.net_utils import initialize_weights
-from utils.data_utils import float32_to_uint8
-from metrics.model_summary import register, parse_model_info
+from codes.utils.net_utils import space_to_depth, backward_warp, get_upsampling_func
+from codes.utils.net_utils import initialize_weights
+from codes.utils.data_utils import float32_to_uint8
+from codes.metrics.model_summary import register, parse_model_info
 
 
 # ====================== generator modules ====================== #
@@ -236,8 +236,8 @@ class FRNet(BaseSequenceGenerator):
         lr_flow = self.fnet(lr_curr, lr_prev)
 
         # pad if size is not a multiple of 8
-        pad_h = lr_curr.size(2) - lr_curr.size(2)//8*8
-        pad_w = lr_curr.size(3) - lr_curr.size(3)//8*8
+        pad_h = lr_curr.size(2) - lr_curr.size(2) // 8 * 8
+        pad_w = lr_curr.size(3) - lr_curr.size(3) // 8 * 8
         lr_flow_pad = F.pad(lr_flow, (0, pad_w, 0, pad_h), 'reflect')
 
         # upsample lr flow
@@ -303,8 +303,8 @@ class FRNet(BaseSequenceGenerator):
         gflops_dict['FNet'], params_dict['FNet'] = parse_model_info(self.fnet)
 
         # profile module 2: sr module
-        pad_h = lr_curr.size(2) - lr_curr.size(2)//8*8
-        pad_w = lr_curr.size(3) - lr_curr.size(3)//8*8
+        pad_h = lr_curr.size(2) - lr_curr.size(2) // 8 * 8
+        pad_w = lr_curr.size(3) - lr_curr.size(3) // 8 * 8
         lr_flow_pad = F.pad(lr_flow, (0, pad_w, 0, pad_h), 'reflect')
         hr_flow = self.scale * self.upsample_func(lr_flow_pad)
         hr_prev_warp = backward_warp(hr_prev, hr_flow)
