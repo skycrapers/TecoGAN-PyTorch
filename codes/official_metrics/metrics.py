@@ -4,7 +4,10 @@ import os, sys
 import pandas as pd
 from LPIPSmodels import util
 import LPIPSmodels.dist_model as dm
-from skimage.measure import compare_ssim
+try:
+	from skimage.measure import compare_ssim
+except ImportError:
+	from skimage.metrics import structural_similarity as compare_ssim
 
 from absl import flags
 flags.DEFINE_string('output', None, 'the path of output directory')

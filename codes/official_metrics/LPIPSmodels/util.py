@@ -9,7 +9,10 @@ import os
 import collections
 import matplotlib.pyplot as plt
 from scipy.ndimage.interpolation import zoom
-from skimage.measure import compare_ssim
+try:
+	from skimage.measure import compare_ssim
+except ImportError:
+	from skimage.metrics import structural_similarity as compare_ssim
 import torch
 from IPython import embed
 import cv2
