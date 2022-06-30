@@ -11,7 +11,7 @@ if __name__ == '__main__':
 
     keys = args.model.split('_')
     assert keys[0] in ('TecoGAN', 'FRVSR')
-    assert keys[1] in ('BD', 'BI')
+    assert (keys[1] in ('BD', 'BI')) or (keys[2] in ('BD', 'BI'))
 
     # set dirs
     Vid4_GT_dir = 'data/Vid4/GT'
