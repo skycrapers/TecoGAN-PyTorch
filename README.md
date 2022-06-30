@@ -47,7 +47,8 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 - Python >= 3.7
 - PyTorch >= 1.4.0
 - Python packages: See [requirements.txt](requirements.txt)
-  - A higher version of pytorch and torchvision may work, but torch==1.9.0 and torchvision==0.10.0 are the last to work with CUDA compute capability 3.5 (such as GeForce TITAN and TITAN BLACK). For a list of which GPUs are compatible with which compute capability, see [CUDA GPUs - Compute Capability](https://developer.nvidia.com/cuda-gpus)
+  - A higher version of pytorch and torchvision may work, but torch==1.7.1 (torchvision==0.8.2 seems compatible) is the lowest version available on pip for Python 3.9 and still only work with CUDA compute capability 3.7 (cards such as GeForce TITAN and TITAN BLACK are 3.5). For a list of which GPUs are compatible with which compute capability, see [CUDA GPUs - Compute Capability](https://developer.nvidia.com/cuda-gpus)
+  - To see what compute capability the installed version of torch supports, run: `python -c "import torch; print(torch.cuda.get_arch_list())"`.
 - (Optional) Matlab >= R2016b
 
 
