@@ -2,3 +2,7 @@
 /data/ToS3
 /data/Vid4
 /pretrained_models/TecoGAN_BD_iter500000.pth
+/pretrained_models/TecoGAN_2x_BD_REDS_iter500K.pth
+/pretrained_models/TecoGAN_4x_BD_REDS_iter500K.pth
+/pretrained_models/TecoGAN_4x_BD_Vimeo_iter500K.pth
+/pretrained_models/TecoGAN_4x_BI_Vimeo_iter500K.pth
