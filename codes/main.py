@@ -5,10 +5,10 @@ import time
 
 import torch
 
-from data import create_dataloader
-from models import define_model
-from metrics import create_metric_calculator
-from utils import dist_utils, base_utils, data_utils
+from codes.data import create_dataloader
+from codes.models import define_model
+from codes.metrics import create_metric_calculator
+from codes.utils import dist_utils, base_utils, data_utils
 
 
 def train(opt):
@@ -224,7 +224,7 @@ def profile(opt, lr_size, test_speed=False):
     msg += f'{"*"*40}\nResolution: {lr_size} -> {hr_size} ({scale}x SR)'
 
     # create model
-    from models.networks import define_generator
+    from codes.models.networks import define_generator
     net_G = define_generator(opt).to(device)
     # base_utils.log_info(f'\n{net_G.__str__()}')
 
@@ -264,7 +264,7 @@ def profile(opt, lr_size, test_speed=False):
     base_utils.log_info(msg)
 
 
-if __name__ == '__main__':
+def main():
     # === parse arguments === #
     args = base_utils.parse_agrs()
 
@@ -290,3 +290,6 @@ if __name__ == '__main__':
 
     else:
         raise ValueError(f'Unrecognized mode: {args.mode} (train|test|profile)')
+
+if __name__ == '__main__':
+	main()

@@ -4,11 +4,14 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-from skimage.measure import compare_ssim
+try:
+	from skimage.measure import compare_ssim
+except ImportError:
+	from skimage.metrics import structural_similarity as compare_ssim
 import torch
 from torch.autograd import Variable
 
-from metrics.LPIPS.models import dist_model
+from codes.metrics.LPIPS.models import dist_model
 
 
 class PerceptualLoss(torch.nn.Module):

@@ -8,7 +8,7 @@ from .vsr_model import VSRModel
 from .networks import define_generator, define_discriminator
 from .networks.vgg_nets import VGGFeatureExtractor
 from .optim import define_criterion, define_lr_schedule
-from utils import base_utils, net_utils, dist_utils
+from codes.utils import base_utils, net_utils, dist_utils
 
 
 class VSRGANModel(VSRModel):
@@ -243,7 +243,7 @@ class VSRGANModel(VSRModel):
         # ping-pong (pp) loss
         if self.pp_crit is not None:
             tempo_extent = self.opt['train']['tempo_extent']
-            hr_data_fw = hr_data[:, :tempo_extent - 1, ...]      # -------->|
+            hr_data_fw = hr_data[:, :tempo_extent - 1, ...]  # -------->|
             hr_data_bw = hr_data[:, tempo_extent:, ...].flip(1)  # <--------|
 
             pp_w = self.opt['train']['pingpong_crit'].get('weight', 1)

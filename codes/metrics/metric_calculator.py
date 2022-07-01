@@ -8,8 +8,8 @@ import cv2
 import torch
 import torch.distributed as dist
 
-from utils import base_utils, data_utils, net_utils
-from utils.dist_utils import master_only
+from codes.utils import base_utils, data_utils, net_utils
+from codes.utils.dist_utils import master_only
 from .LPIPS.models.dist_model import DistModel
 
 

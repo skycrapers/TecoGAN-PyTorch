@@ -42,9 +42,13 @@ This is a PyTorch reimplementation of **TecoGAN**: **Te**mporally **Co**herent *
 ## Dependencies
 - Ubuntu >= 16.04
 - NVIDIA GPU + CUDA
+  - CUDA Toolkit 11.3 is the latest version with which Pytorch is compatible as of June 2022.
+  - To see which GPU driver versions are compatible with which CUDA Toolkit version, see [CUDA Compatibility](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 - Python >= 3.7
 - PyTorch >= 1.4.0
-- Python packages: numpy, matplotlib, opencv-python, pyyaml, lmdb
+- Python packages: See [requirements.txt](requirements.txt)
+  - A higher version of pytorch and torchvision may work, but torch==1.7.1 (torchvision==0.8.2 seems compatible) is the lowest version available on pip for Python 3.9 and still only work with CUDA compute capability 3.7 (cards such as GeForce TITAN and TITAN BLACK are 3.5). For a list of which GPUs are compatible with which compute capability, see [CUDA GPUs - Compute Capability](https://developer.nvidia.com/cuda-gpus)
+  - To see what compute capability the installed version of torch supports, run: `python -c "import torch; print(torch.cuda.get_arch_list())"`.
 - (Optional) Matlab >= R2016b
 
 

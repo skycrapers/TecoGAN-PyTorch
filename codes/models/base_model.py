@@ -7,8 +7,8 @@ import torch.nn.functional as F
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel
 
-from utils.data_utils import create_kernel, downsample_bd
-from utils.dist_utils import master_only
+from codes.utils.data_utils import create_kernel, downsample_bd
+from codes.utils.dist_utils import master_only
 
 
 class BaseModel():

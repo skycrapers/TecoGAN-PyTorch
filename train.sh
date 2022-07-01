@@ -45,7 +45,7 @@ if [[ ${num_gpus} > 1 ]]; then
 fi
 
 CUDA_VISIBLE_DEVICES=${gpu_ids} \
-  python ${dist_args} ${root_dir}/codes/main.py \
+  python ${dist_args} ${root_dir}/run.py \
   --exp_dir ${exp_dir} \
   --mode train \
   --opt train${suffix}.yml \
